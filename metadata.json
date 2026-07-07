@@ -1,0 +1,6 @@
+{
+  "name": "Afrolineo",
+  "description": "An oral-history driven genealogy and community heritage vault for African ethnic and native lineages.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
