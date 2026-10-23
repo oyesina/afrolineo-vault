@@ -9,6 +9,7 @@ import FamilyTree, { RELATION_PHRASE, ROLE_INFO, SIDE_STYLES, initials } from '.
 import OriginsProfileForm from './components/OriginsProfileForm';
 import RecordingStudio from './components/RecordingStudio';
 import LineageMark from './components/LineageMark';
+import { identify, setAnalyticsUser, syncTreeOutline, track } from './lib/analytics';
 import DiscoveryHub from './components/DiscoveryHub';
 import UserLoginGate from './components/UserLoginGate';
 import CommunityVault from './components/CommunityVault';
@@ -153,7 +154,7 @@ const APP_NAV: { id: string; screen: AppScreen; label: string; shortLabel: strin
   { id: 'sidebar-nav-tree-btn', screen: 'tree', label: 'Family tree', shortLabel: 'Tree', icon: LineageMark },
   { id: 'sidebar-nav-discovery-btn', screen: 'discovery', label: 'Discover', shortLabel: 'Discover', icon: Globe },
   { id: 'sidebar-nav-community-btn', screen: 'community', label: 'Relatives', shortLabel: 'Relatives', icon: Users },
-  { id: 'sidebar-nav-dash-btn', screen: 'dash', label: 'Founder metrics', shortLabel: 'Metrics', icon: Flame },
+  // Founder metrics moved to the admin console at /admin
   { id: 'sidebar-nav-about-btn', screen: 'about', label: 'About', shortLabel: 'About', icon: HelpCircle },
 ];
 
@@ -186,6 +187,14 @@ export default function App() {
   }) => {
     setCurrentUser(userData);
     localStorage.setItem('afrolineo_auth_user', JSON.stringify(userData));
+    identify(userData).then(() => {
+      track('signed_in', { provider: userData.provider });
+      track('onboarding_completed', {
+        country: userData.ancestralCountry,
+        ethnicGroup: userData.ethnicGroup,
+        knowledgeLevel: userData.knowledgeLevel,
+      });
+    });
 
     // Guide the family tree profile state dynamically on successful authentication using details entered!
     setProfiles(prev => {
@@ -218,6 +227,8 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    track('signed_out');
+    setAnalyticsUser(null);
     setCurrentUser(null);
     localStorage.removeItem('afrolineo_auth_user');
   };
@@ -290,6 +301,7 @@ export default function App() {
     const audio = new Audio(`data:audio/webm;base64,${story.audioBase64}`);
     audio.onended = () => setPlayingStoryId(null);
     audio.play().catch(() => setPlayingStoryId(null));
+    track('story_played', { durationSec: story.durationSec });
     storyAudioRef.current = audio;
     setPlayingStoryId(story.id);
   };
@@ -483,6 +495,7 @@ export default function App() {
       linkedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     };
     setLinkedRelatives(prev => [...prev, newLink]);
+    track('relative_linked', { closeness: newLink.clanshipType });
   };
 
   const handleRemoveLink = (id: string) => {
@@ -503,6 +516,7 @@ export default function App() {
   const handleSaveProfile = (formPayload: Omit<Profile, 'id' | 'avatarColor'> & { id?: string }) => {
     if (formPayload.id) {
       // Editing existing profile
+      track('profile_updated', { role: formPayload.role });
       setProfiles(prev =>
         prev.map(p =>
           p.id === formPayload.id
@@ -531,6 +545,7 @@ export default function App() {
         avatarColor: selectedColor
       };
       setProfiles(prev => [...prev, newProfile]);
+      track('profile_added', { role: newProfile.role, isAlive: newProfile.isAlive });
     }
     setShowForm(false);
     setFixedRoleForForm(undefined);
@@ -542,11 +557,17 @@ export default function App() {
       id: `rec-${Date.now()}`
     };
     setRecordings(prev => [...prev, newRec]);
+    track('recording_saved', {
+      durationSec: newRec.durationSec,
+      hasAudio: !!newRec.audioBase64,
+      role: profiles.find((p) => p.id === newRec.profileId)?.role,
+    });
     setShowRecordingStudio(false);
   };
 
   const handleDeleteProfile = (profileId: string) => {
     if (confirm('Are you absolutely sure you want to delete this lineage node? This will also un-link any attached oral history audio records.')) {
+      track('profile_deleted', { role: profiles.find((p) => p.id === profileId)?.role });
       setProfiles(prev => prev.filter(p => p.id !== profileId));
       setRecordings(prev => prev.filter(r => r.profileId !== profileId));
       setSelectedProfile(null);
@@ -555,6 +576,7 @@ export default function App() {
 
   // Sovereign JSON export
   const triggerExportDatabase = () => {
+    track('backup_exported', { people: profiles.length, stories: recordings.length });
     const payload = JSON.stringify({ profiles, recordings, linkedRelatives }, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -637,6 +659,26 @@ export default function App() {
       setShowFeedbackModal(false);
     }, 2000);
   };
+
+  // ---- Usage analytics for the admin console ----
+  useEffect(() => {
+    if (!currentUser) return;
+    // Re-identify each session so accounts created before tracking existed are known
+    identify(currentUser).then(() => {
+      track('session_started');
+      syncTreeOutline(profiles);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.email]);
+
+  useEffect(() => {
+    if (currentUser) track('screen_viewed', { screen: activeScreen });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScreen, currentUser?.email]);
+
+  useEffect(() => {
+    if (currentUser) syncTreeOutline(profiles);
+  }, [profiles, currentUser]);
 
   if (!currentUser) {
     return <UserLoginGate onLoginSuccess={handleLoginSuccess} />;
@@ -765,7 +807,7 @@ export default function App() {
       </header>
 
       {/* Phone bottom navigation */}
-      <nav aria-label="App" className="md:hidden bg-white border-t border-line fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+      <nav aria-label="App" className="md:hidden bg-white border-t border-line fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
         {APP_NAV.map(({ screen, shortLabel, icon: Icon }) => {
           const active = activeScreen === screen;
           return (
@@ -1434,7 +1476,7 @@ export default function App() {
                   About Afrolineo Platform
                 </h2>
                 <p className="text-xs text-gray-300 mt-1.5 max-w-2xl leading-relaxed font-serif italic">
-                  Curating tools to reverse the digital erasure of oral lineages. Learn about our social mission, secure zero-knowledge protocols, careers, and media dispatches.
+                  Curating tools to reverse the digital erasure of oral lineages. Learn about our social mission, privacy practices, careers, and media dispatches.
                 </p>
               </div>
               <button
@@ -2000,7 +2042,7 @@ export default function App() {
                     </div>
 
                     <p className="text-sm text-gray-700 leading-relaxed font-light">
-                      This Covenant is established between you (the Heritage Custodian) and the Afrolineo sandbox engine. We explicitly renounce modern tracking systems, ad trackers, and metadata brokering layers.
+                      This Covenant is established between you (the Heritage Custodian) and the Afrolineo sandbox engine. We do not use ad trackers or sell data. We keep a first-party record of your account, your tree outline (names and relationships) and which features you use, so we can improve Afrolineo.
                     </p>
 
                     <h4 className="font-sans font-bold text-xs uppercase tracking-wide text-[#2D2926] pt-2">Our Absolute Privacy Pledge:</h4>
@@ -2253,7 +2295,7 @@ export default function App() {
                     </div>
 
                     <p className="text-sm text-gray-700 leading-relaxed font-light">
-                      Unlike commercial ancestry tools that trade, index, or sell your family’s oral tapes and genealogical records, Afrolineo operates on a <strong>strictly decentralized, zero-knowledge, client-first database sandbox</strong>.
+                      Unlike commercial ancestry tools that trade, index, or sell your family’s oral tapes and genealogical records, Afrolineo keeps your <strong>recordings and transcripts on your own device</strong> and only keeps a minimal account record, tree outline and usage history on its servers.
                     </p>
 
                     <div className="bg-[#FAF8F5] p-5 border border-gray-150 rounded-sm space-y-3">
@@ -2493,7 +2535,7 @@ export default function App() {
                       <h4 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wider">Frequently Answered Protocols:</h4>
                       
                       {[
-                        { q: 'Will my records vanish if I clear my browser history?', a: 'Yes. Afrolineo operates in a zero-knowledge local sandbox. To prevent loss, open your Active Sitemap and download an offline archive (.afrolineo backup file) weekly.' },
+                        { q: 'Will my records vanish if I clear my browser history?', a: 'Yes. Your recordings and full tree are stored only in your browser. To prevent loss, open your Active Sitemap and download an offline archive (.afrolineo backup file) weekly.' },
                         { q: 'How do I combine family branches with relatives?', a: 'Go to your Active Sitemap, select "Sovereign Offline Backup", export your tree as JSON, and share it. Relatives can import your file to merge nodes seamlessly.' },
                         { q: 'Are village compound nodes accessible without internet?', a: 'Yes! Our custom application works offline. You can map lineages, write bios, and save logs; they sync securely once a connection is detected.' }
                       ].map((faq, idx) => (

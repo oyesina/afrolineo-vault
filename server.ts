@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { mountAnalytics } from "./server/analytics";
 
 dotenv.config();
 
@@ -11,6 +12,9 @@ const PORT = 3000;
 
 // Set up JSON body handling with elevated limit for audio uploads
 app.use(express.json({ limit: "25mb" }));
+
+// Usage analytics + password-protected admin API (see server/analytics.ts)
+mountAnalytics(app);
 
 // Initialize Google Gemini Client securely if key exists
 const apiKey = process.env.GEMINI_API_KEY;

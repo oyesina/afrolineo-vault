@@ -63,7 +63,7 @@ export const ARTICLES: Article[] = [
     author: 'Chika Ndiaye, Chief Technology Custodian',
     readTime: '4 min read',
     date: 'April 2026',
-    excerpt: 'Exploring the technical and philosophical reasons behind Afrolineo\'s zero-tracking architecture, and how client-side state preserves family integrity.',
+    excerpt: 'Exploring the technical and philosophical reasons behind Afrolineo\'s local-first architecture, and how client-side state preserves family integrity.',
     tags: ['Privacy', 'Sovereignty', 'Architecture'],
     content: `Commercial DNA and genealogical registries are built around a predatory monetization engine: the centralization of ancestral biodata. Once you upload your lineage and DNA markers, they are owned by corporate clouds, who lease or sell them to pharmaceutical and insurance entities.\n\nAfrolineo is engineered on the principle of Sovereignty. Your family’s oral archives and structural mappings are saved strictly in your client-side browser Sandbox (using local IndexedDB state). There is no central database that can be hacked, sold, or index-linked. Your files are your own. This article explains how you can use our "Sovereign Offline Backup" to securely manage, export, and merge family nodes completely independent of external surveillance.`
   },

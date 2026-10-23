@@ -8,6 +8,7 @@ import {
   Settings, Plus, Download, Smile, Search, BookOpen, Gift, Play, Pause, Bookmark, Check
 } from 'lucide-react';
 import LineageMark from './LineageMark';
+import { track } from '../lib/analytics';
 
 import { ARTICLES, GIFTS, STORIES } from '../data/exploreData';
 
@@ -174,7 +175,7 @@ const STORY_POINTS = [
 ];
 
 const PRIVACY_POINTS = [
-  { icon: Lock, title: 'Kept on your device', body: 'Your tree and recordings are stored in your own browser, not in a public database.' },
+  { icon: Lock, title: 'Your stories stay with you', body: 'Recordings, transcripts and notes are stored in your own browser. We keep only your account, an outline of your tree (names and relationships) and how you use the app.' },
   { icon: Download, title: 'Export everything', body: 'Download your whole archive, with audio and transcripts, as one file whenever you want.' },
   { icon: ShieldCheck, title: 'You choose who connects', body: 'Other families only see a match if you both agree to link.' },
 ];
@@ -373,12 +374,19 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [isLoginWindowOpen, showOAuthPopup]);
 
+  // Count each landing page visit once per page load
+  useEffect(() => {
+    track('landing_viewed', { referrer: document.referrer ? new URL(document.referrer).hostname : 'direct' });
+  }, []);
+
   const openSignIn = () => {
+    track('auth_opened', { mode: 'sign_in' });
     setIsSignUp(false);
     setIsLoginWindowOpen(true);
   };
 
   const openSignUp = () => {
+    track('auth_opened', { mode: 'sign_up' });
     setIsSignUp(true);
     setIsLoginWindowOpen(true);
   };
@@ -960,7 +968,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   {isSignUp ? 'Start your family archive' : 'Welcome back'}
                 </h2>
                 <p className="mt-1.5 text-[15px] text-muted">
-                  {isSignUp ? 'Free to start. Your tree stays in your browser.' : 'Sign in to continue your family tree.'}
+                  {isSignUp ? 'Free to start. Your recordings stay on your device.' : 'Sign in to continue your family tree.'}
                 </p>
 
                 <div className="mt-6 grid grid-cols-2 gap-2.5">
@@ -1478,7 +1486,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </div>
 
                     <p className="text-gray-700 leading-relaxed font-light">
-                      We operate on a zero-tracking framework. You are the sole custodian of your heritage. Your files are not indexed, scanned, or used to train commercial AI speech generators.
+                      Your recordings, transcripts and notes are stored only in your browser. To run and improve Afrolineo we keep your account details, an outline of your family tree (names and relationships) and a record of which features you use. We never sell this data or use it for advertising, and your recordings are not used to train AI. If you use automatic transcription, the audio is sent to Google’s Gemini service to be transcribed and is not kept by Afrolineo.
                     </p>
                     <p className="text-gray-500 font-mono text-xs">
                       Latest Revision: June 2026 • Local Sandbox Compliant
@@ -1517,7 +1525,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </div>
 
                     <p className="text-gray-700 leading-relaxed font-light">
-                      Unlike generic ancestry corporations that claim global rights to reproduce, process, or sell your family’s DNA sequences and genealogical trees, Afrolineo operates on a <strong>strictly decentralized, zero-tracking, client-controlled framework</strong>.
+                      Unlike generic ancestry corporations that claim global rights to reproduce, process, or sell your family’s DNA sequences and genealogical trees, Afrolineo keeps your <strong>recordings and transcripts on your own device</strong> and only keeps a minimal account record, tree outline and usage history on its servers.
                     </p>
 
                     <div className="bg-[#FAF8F5] p-4 border border-gray-150 rounded space-y-2.5">
@@ -1757,7 +1765,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wider">Frequently Answered Protocols:</h5>
                       
                       {[
-                        { q: 'Will my files vanish if I clear my browser cookies?', a: 'Yes. Since Afrolineo operates in a zero-knowledge local sandbox, clearing your browser\'s cache/history will wipe local database memory. ALWAYS download a sovereign backup (.afrolineo archive) after completing updates.' },
+                        { q: 'Will my files vanish if I clear my browser cookies?', a: 'Yes. Your recordings and full tree are stored only in your browser, so clearing your browser\'s cache/history will wipe them. ALWAYS download a sovereign backup (.afrolineo archive) after completing updates.' },
                         { q: 'How do I combine family tree segments with my cousins?', a: 'Open the Active Sitemap and launch the "Sovereign Offline Backup" panel. Export your tree as JSON, send it to your cousin, and they can run the import utility to merge matching compound directories.' },
                         { q: 'Do you offer offline recording support for villages?', a: 'Yes! Our community teams distribute physical audio dictation machines and mesh WiFi local hub units to elder squares with low internet connectivity.' }
                       ].map((faq, idx) => (
