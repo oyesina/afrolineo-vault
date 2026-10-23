@@ -259,7 +259,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                 onChange={(e) => setFamilyCompound(e.target.value)}
                 className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white"
               />
-              <span className="text-[10px] text-gray-400 mt-1 block">
+              <span className="text-xs text-gray-400 mt-1 block">
                 The granular extended household fortress name.
               </span>
             </div>
@@ -354,7 +354,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                   onClick={() => setShowLgaDropdown(false)}
                 />
               )}
-              <span className="text-[10px] text-gray-400 mt-1 block">
+              <span className="text-xs text-gray-400 mt-1 block">
                 Ensures local administrative lookup matching.
               </span>
             </div>
@@ -383,7 +383,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                 <Users className="w-3.5 h-3.5 text-gray-400" />
                 Estimated Branch Lineage Size
               </span>
-              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-mono text-[10px]">
+              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-mono text-xs">
                 {familySizeEstimate} + Kin
               </span>
             </div>
@@ -397,7 +397,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
               onChange={(e) => setFamilySizeEstimate(parseInt(e.target.value))}
               className="w-full accent-amber-600 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-mono">
+            <div className="flex justify-between text-xs text-gray-400 mt-1 font-mono">
               <span>Small family (5+)</span>
               <span>Extended clan (250+)</span>
             </div>

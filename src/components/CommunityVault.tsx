@@ -202,7 +202,7 @@ export default function CommunityVault({
         </div>
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-4 h-4 text-[#E2A04F]" />
-          <span className="text-[9px] uppercase tracking-[0.2em] font-sans text-[#E2A04F] font-semibold">COOPERATIVE ORAL COUSINS MAP</span>
+          <span className="text-xs uppercase tracking-wider font-sans text-[#E2A04F] font-semibold">COOPERATIVE ORAL COUSINS MAP</span>
         </div>
         <h2 className="font-display font-medium text-2xl tracking-tight">Kinship Community Springboard</h2>
         <p className="text-xs text-gray-300 max-w-xl mt-2.5 leading-relaxed font-sans">
@@ -215,7 +215,7 @@ export default function CommunityVault({
         <div className="bg-[#E2A04F]/10 border border-[#E2A04F]/30 p-4 rounded-sm flex items-start gap-3.5 mb-8 animate-pulse">
           <Sparkles className="w-5 h-5 text-[#E2A04F] shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h4 className="text-[10px] uppercase tracking-[0.15em] font-black font-sans text-amber-900 leading-none mb-1">
+            <h4 className="text-xs uppercase tracking-[0.15em] font-black font-sans text-amber-900 leading-none mb-1">
               Lineage Intersection Points Detected ({suggestedMatches.length})
             </h4>
             <p className="text-xs text-amber-950 font-serif">
@@ -231,7 +231,7 @@ export default function CommunityVault({
                     setCustomRelationNotes(`Linked due to shared match: ${match.reason}`);
                     setShowManualForm(false);
                   }}
-                  className="bg-white/90 hover:bg-white text-gray-900 border border-[#E2A04F]/40 text-[9px] font-bold px-2.5 py-1 uppercase tracking-wider rounded-sm transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                  className="bg-white/90 hover:bg-white text-gray-900 border border-[#E2A04F]/40 text-xs font-bold px-2.5 py-1 uppercase tracking-wider rounded-sm transition-all shadow-xs flex items-center gap-1 cursor-pointer"
                 >
                   <Link2 className="w-3 h-3 text-[#E2A04F]" />
                   Link {match.userProfile.fullName.replace(' (Self)', '')} ➔ {match.commProfile.fullName}
@@ -248,7 +248,7 @@ export default function CommunityVault({
         {/* Left Side: Directory & Manual linkage option */}
         <div className="lg:col-span-7 space-y-6">
           <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-            <h3 className="font-sans font-bold text-[10px] uppercase tracking-[0.18em] text-gray-500">
+            <h3 className="font-sans font-bold text-xs uppercase tracking-[0.18em] text-gray-500">
               Community Directory Directory
             </h3>
 
@@ -257,7 +257,7 @@ export default function CommunityVault({
                 setShowManualForm(!showManualForm);
                 setSelectedCommunityMember(null);
               }}
-              className="text-[9px] uppercase tracking-wider text-[#E2A04F] hover:text-[#2D2926] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-xs uppercase tracking-wider text-[#E2A04F] hover:text-[#2D2926] font-bold flex items-center gap-1 transition-colors cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               {showManualForm ? "Browse Directory" : "Link External Relative"}
@@ -294,12 +294,12 @@ export default function CommunityVault({
                           </div>
                           <div>
                             <h4 className="font-display font-medium text-sm text-[#2D2926]">{item.fullName}</h4>
-                            <span className="text-[9.5px] italic text-[#E2A04F] font-semibold">{item.familyCompound}</span>
+                            <span className="text-xs italic text-[#E2A04F] font-semibold">{item.familyCompound}</span>
                           </div>
                         </div>
 
                         {matchingCount > 0 && (
-                          <span className="text-[8px] bg-emerald-50 text-emerald-800 border border-emerald-250 py-0.5 px-2 rounded-full font-bold uppercase tracking-wider animate-pulse">
+                          <span className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-250 py-0.5 px-2 rounded-full font-bold uppercase tracking-wider animate-pulse">
                             Overlap Match
                           </span>
                         )}
@@ -309,7 +309,7 @@ export default function CommunityVault({
                         "{item.notes}"
                       </p>
 
-                      <div className="grid grid-cols-2 gap-2 mt-3 text-[10px] text-gray-500 font-sans">
+                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs text-gray-500 font-sans">
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-[#E2A04F]" />
                           <span>LGA: {item.lga}</span>
@@ -321,7 +321,7 @@ export default function CommunityVault({
                       </div>
 
                       <div className="border-t border-gray-100 pt-3 mt-3 flex justify-between items-center">
-                        <span className="text-[9px] text-[#2D2926]/40 font-mono">
+                        <span className="text-xs text-[#2D2926]/40 font-mono">
                           Directory Group Size: ~{item.familySizeEstimate}
                         </span>
 
@@ -333,7 +333,7 @@ export default function CommunityVault({
                               setSelectedMyProfileId(profiles[0].id);
                             }
                           }}
-                          className="bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[9.5px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-sm transition-all flex items-center gap-1 cursor-pointer"
+                          className="bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs uppercase font-bold tracking-widest px-3 py-1.5 rounded-sm transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Link2 className="w-3.5 h-3.5" />
                           Establish Kin Link
@@ -349,7 +349,7 @@ export default function CommunityVault({
             <form onSubmit={handleManualLinkSubmit} className="bg-[#FAF8F5] border border-gray-200 p-5 rounded-sm space-y-4">
               <div className="border-b border-gray-200 pb-2 mb-2">
                 <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Link an External Relative (Sovereign Declaration)</h4>
-                <p className="text-[10px] text-gray-500 mt-0.5 font-serif">
+                <p className="text-xs text-gray-500 mt-0.5 font-serif">
                   Declare a link to a relative who is not listed in the standard seed folder. Enter their names and origin records below.
                 </p>
               </div>
@@ -363,7 +363,7 @@ export default function CommunityVault({
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                         Select Member in Your Tree
                       </label>
                       <select
@@ -382,7 +382,7 @@ export default function CommunityVault({
                     </div>
 
                     <div>
-                      <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                         Relative's Full Name (External)
                       </label>
                       <input
@@ -398,7 +398,7 @@ export default function CommunityVault({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                         Their Ancestral Compound (External)
                       </label>
                       <input
@@ -412,7 +412,7 @@ export default function CommunityVault({
                     </div>
 
                     <div>
-                      <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                         Their LGA / District
                       </label>
                       <input
@@ -428,7 +428,7 @@ export default function CommunityVault({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                         Clanship Integrity Level
                       </label>
                       <div className="flex gap-4 mt-2">
@@ -455,7 +455,7 @@ export default function CommunityVault({
                   </div>
 
                   <div>
-                    <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">
                       Relationship Annotation / Story links
                     </label>
                     <textarea
@@ -502,7 +502,7 @@ export default function CommunityVault({
                     <Link2 className="w-4 h-4 text-[#E2A04F]" />
                     Connection Calibration Builder
                   </h4>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Connecting to {selectedCommunityMember.fullName}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Connecting to {selectedCommunityMember.fullName}</p>
                 </div>
                 <button 
                   onClick={() => setSelectedCommunityMember(null)}
@@ -519,7 +519,7 @@ export default function CommunityVault({
               ) : (
                 <form onSubmit={handlesSubmitLink} className="space-y-3">
                   <div>
-                    <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-1">
                       Who in your tree matches this relative?
                     </label>
                     <select
@@ -538,7 +538,7 @@ export default function CommunityVault({
                   </div>
 
                   <div>
-                    <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-1">
                       Connection Integrity LEVEL
                     </label>
                     <div className="flex gap-4 mt-1">
@@ -564,7 +564,7 @@ export default function CommunityVault({
                   </div>
 
                   <div>
-                    <label className="block text-[8px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-1">
                       Verifiable Alignment Notes (Optional)
                     </label>
                     <textarea
@@ -580,13 +580,13 @@ export default function CommunityVault({
                     <button
                       type="button"
                       onClick={() => setSelectedCommunityMember(null)}
-                      className="px-3 py-1.5 border border-gray-200 text-[10px] uppercase font-bold rounded hover:bg-gray-100 cursor-pointer"
+                      className="px-3 py-1.5 border border-gray-200 text-xs uppercase font-bold rounded hover:bg-gray-100 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 bg-[#E2A04F] hover:bg-[#d0903f] text-black text-[10px] uppercase font-bold tracking-widest rounded cursor-pointer"
+                      className="px-4 py-1.5 bg-[#E2A04F] hover:bg-[#d0903f] text-black text-xs uppercase font-bold tracking-widest rounded cursor-pointer"
                     >
                       Authenticate Linkage
                     </button>
@@ -599,7 +599,7 @@ export default function CommunityVault({
           {/* List of established linkages */}
           <div className="border border-gray-200 p-5 rounded-sm bg-[#FAF8F5]/40 space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-[10px] font-sans uppercase tracking-[0.18em] text-[#2D2926]/60 font-bold">
+              <span className="text-xs font-sans uppercase tracking-[0.18em] text-[#2D2926]/60 font-bold">
                 My Linked Sovereign Relatives ({linkedRelatives.length})
               </span>
               <Heart className={`w-4 h-4 text-rose-500 ${linkedRelatives.length > 0 ? 'fill-rose-500' : ''}`} />
@@ -609,7 +609,7 @@ export default function CommunityVault({
               <div className="text-center py-12 text-gray-400 space-y-2">
                 <Link2 className="w-8 h-8 text-gray-300 mx-auto" />
                 <p className="text-xs font-serif italic">No clanship links currently authenticated.</p>
-                <p className="text-[10px] max-w-xs mx-auto leading-normal">
+                <p className="text-xs max-w-xs mx-auto leading-normal">
                   Connect your family nodes on the left directory map with verified community records to build real-time linkage.
                 </p>
               </div>
@@ -625,12 +625,12 @@ export default function CommunityVault({
                       <div>
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[8px] uppercase tracking-widest font-bold bg-[#E2A04F]/10 text-amber-950 px-2 py-0.5 rounded-sm border border-[#E2A04F]/20">
+                            <span className="text-xs uppercase tracking-widest font-bold bg-[#E2A04F]/10 text-amber-950 px-2 py-0.5 rounded-sm border border-[#E2A04F]/20">
                               {link.clanshipType === 'close' ? 'Close Kin' : 'Distant Kin'}
                             </span>
                             <div className="text-xs font-serif font-black text-[#2D2926] mt-2 leading-tight">
                               {localProfile ? localProfile.fullName : 'Sovereign Node'}
-                              <span className="text-[10px] font-sans font-normal text-gray-400"> is connected to </span>
+                              <span className="text-xs font-sans font-normal text-gray-400"> is connected to </span>
                               <strong className="text-amber-950 font-sans">{link.relativeName}</strong>
                             </div>
                           </div>
@@ -644,17 +644,17 @@ export default function CommunityVault({
                           </button>
                         </div>
 
-                        <div className="text-[10px] text-gray-500 mt-2 font-sans bg-gray-50/70 p-2.5 rounded-sm border border-gray-150 relative">
+                        <div className="text-xs text-gray-500 mt-2 font-sans bg-gray-50/70 p-2.5 rounded-sm border border-gray-150 relative">
                           <Home className="w-3.5 h-3.5 text-[#E2A04F] absolute right-2 top-2 opacity-30" />
                           <div>Compound: <strong>{link.relativeCompound}</strong></div>
                           <div>District (LGA): <strong>{link.relativeLga}</strong></div>
-                          <p className="text-[9.5px] italic text-[#2D2926]/80 border-t border-gray-150/50 mt-1.5 pt-1.5 pr-4 font-serif">
+                          <p className="text-xs italic text-[#2D2926]/80 border-t border-gray-150/50 mt-1.5 pt-1.5 pr-4 font-serif">
                             "{link.notes}"
                           </p>
                         </div>
                       </div>
 
-                      <div className="text-[8px] font-mono text-gray-400 text-right mt-2 leading-none">
+                      <div className="text-xs font-mono text-gray-400 text-right mt-2 leading-none">
                         Declared: {link.linkedAt}
                       </div>
                     </div>
@@ -665,7 +665,7 @@ export default function CommunityVault({
           </div>
 
           {/* Education panel */}
-          <div className="border border-dashed border-gray-200 p-4.5 bg-gray-55/20 text-[10px] text-gray-500 rounded-lg flex items-start gap-2.5 leading-relaxed font-sans mt-3">
+          <div className="border border-dashed border-gray-200 p-4.5 bg-gray-55/20 text-xs text-gray-500 rounded-lg flex items-start gap-2.5 leading-relaxed font-sans mt-3">
             <HelpCircle className="w-4 h-4 text-[#E2A04F] shrink-0 mt-0.5" />
             <div>
               <span className="font-bold block text-gray-700 uppercase tracking-wider mb-0.5">Kinship Calibration Integrity</span>

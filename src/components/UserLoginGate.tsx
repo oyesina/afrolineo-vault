@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Mail, Chrome, Facebook, Apple, Twitter, Lock, Sparkles, 
   ArrowRight, ShieldCheck, CheckCircle2, AlertCircle, HelpCircle, 
   UserCheck, Heart, Radio, Languages, Compass, Mic, Network, Shield,
   X as CloseIcon, ChevronDown, CheckCircle, Volume2,
   Globe, Briefcase, Newspaper, FileText, Users, UserPlus, Flame, 
-  Settings, Plus, Download, Smile, Search, BookOpen, Gift, Play, Pause, Bookmark
+  Settings, Plus, Download, Smile, Search, BookOpen, Gift, Play, Pause, Bookmark, Check
 } from 'lucide-react';
+import LineageMark from './LineageMark';
 
 import { ARTICLES, GIFTS, STORIES } from '../data/exploreData';
 
@@ -135,6 +136,159 @@ const getEthnicGroupsForCountry = (country: string): string[] => {
   return ETHNIC_GROUPS_BY_COUNTRY[country] || ['Other Ancestral Group'];
 };
 
+// ---------- Landing page content ----------
+
+const WAVEFORM = [30, 55, 40, 70, 85, 60, 45, 75, 95, 65, 50, 80, 70, 40, 55, 90, 75, 50, 35, 60, 80, 65, 45, 70, 55, 40, 60, 75, 50, 35, 45, 65, 55, 40, 30, 50, 40, 30, 25, 35];
+
+const HOW_IT_WORKS = [
+  {
+    icon: Mic,
+    tint: 'bg-ochre-tint text-paternal-ink',
+    title: 'Record an elder',
+    body: 'Press record and let them talk, or upload a voice note a relative sent you. Each story is transcribed and filed under that person\u2019s name.',
+  },
+  {
+    icon: LineageMark,
+    tint: 'bg-forest-tint text-forest',
+    title: 'Map your lineage',
+    body: 'Add parents, grandparents and siblings. Note each person\u2019s family compound, town and language, the details paper records leave out.',
+  },
+  {
+    icon: Users,
+    tint: 'bg-indigo-tint text-indigo',
+    title: 'Find your kin',
+    body: 'When another family names the same compound or district, we let you know. You decide whether to connect.',
+  },
+];
+
+const SAMPLE_TRANSCRIPT = [
+  { time: '0:12', text: 'My grandchildren, remember this. Our people did not begin in this town.' },
+  { time: '0:31', text: 'We left in the dry season, carrying the seed yams and the names of our fathers.' },
+  { time: '0:54', text: 'The market women of Onitsha knew my mother by her cloth\u2026' },
+];
+
+const STORY_POINTS = [
+  { title: 'In their own language.', body: 'Yoruba, Igbo, Hausa, Wolof, Twi and more.' },
+  { title: 'Searchable transcripts.', body: 'Find every mention of a town or a name.' },
+  { title: 'Attached to the person.', body: 'Open anyone in the tree to hear them.' },
+];
+
+const PRIVACY_POINTS = [
+  { icon: Lock, title: 'Kept on your device', body: 'Your tree and recordings are stored in your own browser, not in a public database.' },
+  { icon: Download, title: 'Export everything', body: 'Download your whole archive, with audio and transcripts, as one file whenever you want.' },
+  { icon: ShieldCheck, title: 'You choose who connects', body: 'Other families only see a match if you both agree to link.' },
+];
+
+const FOOTER_LINKS: { label: string; tab?: string }[] = [
+  { label: 'Articles', tab: 'articles' },
+  { label: 'Family stories', tab: 'customer-stories' },
+  { label: 'Gifts', tab: 'gifts' },
+  { label: 'Privacy', tab: 'privacy' },
+  { label: 'Terms', tab: 'terms' },
+  { label: 'Help', tab: 'support' },
+  { label: 'All pages' },
+];
+
+function PreviewAvatar({ initials, dashed, size = 'md', className = '' }: { initials?: string; dashed?: boolean; size?: 'md' | 'lg'; className?: string }) {
+  const dims = size === 'lg' ? 'w-13 h-13 text-[15px]' : 'w-11 h-11 text-sm';
+  if (dashed) {
+    return <span className={`${dims} rounded-full border-[1.5px] border-dashed border-line-strong text-[#8C8174] flex items-center justify-center text-xl`}>+</span>;
+  }
+  return <span className={`${dims} rounded-full font-bold flex items-center justify-center ${className}`}>{initials}</span>;
+}
+
+/** Thin strip of brand colours, inspired by woven kente cloth. */
+function PatternBand() {
+  const colours = ['bg-ochre', 'bg-ink', 'bg-forest', 'bg-sand', 'bg-[#9A5B14]', 'bg-indigo'];
+  return (
+    <div aria-hidden="true" className="flex h-2.5 overflow-hidden">
+      {Array.from({ length: 60 }, (_, i) => (
+        <span key={i} className={`flex-[1_0_30px] ${colours[i % colours.length]}`} />
+      ))}
+    </div>
+  );
+}
+
+// ---------- Sign-in window ----------
+
+const FIELD_CLASS =
+  'w-full h-12 px-4 rounded-xl bg-white border border-line text-[15px] text-ink outline-none transition focus:border-ochre focus:ring-2 focus:ring-ochre/25 disabled:opacity-60';
+const LABEL_CLASS = 'block text-sm font-semibold text-ink-soft mb-1.5';
+const PRIMARY_BUTTON_CLASS =
+  'w-full h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60';
+
+const KNOWLEDGE_OPTIONS = [
+  { value: 'Just starting out', title: 'Just starting', body: 'I know my parents, maybe a grandparent.' },
+  { value: 'Know 2-3 generations', title: 'Some generations', body: 'I know my parents and grandparents.' },
+  { value: 'Pre-colonial dynasty archivist', title: 'Deep history', body: 'I know four or more generations.' },
+];
+
+const OAUTH_PROVIDERS: { id: string; label: string; icon: React.ReactNode }[] = [
+  {
+    id: 'Google',
+    label: 'Google',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.62-1.07-1.37-1.34-2.22z" />
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'Apple',
+    label: 'Apple',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0 fill-current" aria-hidden="true">
+        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.7-1.13 1.84-.99 2.94.12 1.12.9 1.1.9 1.1s.63-.53.92-2.43z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'X',
+    label: 'X',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-current" aria-hidden="true">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'Facebook',
+    label: 'Facebook',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0 fill-[#1877F2]" aria-hidden="true">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+      </svg>
+    ),
+  },
+];
+
+function Spinner() {
+  return <span aria-hidden="true" className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />;
+}
+
+function StatusMessage({ error, success }: { error?: string; success?: string }) {
+  if (error) {
+    return (
+      <div role="alert" className="mb-4 mt-4 p-3.5 rounded-xl bg-[#FDECEA] text-[#8A1C12] text-sm flex items-start gap-2.5">
+        <AlertCircle className="w-[18px] h-[18px] shrink-0 mt-px" aria-hidden="true" />
+        <span>{error}</span>
+      </div>
+    );
+  }
+  if (success) {
+    return (
+      <div role="status" className="mb-4 mt-4 p-3.5 rounded-xl bg-forest-tint text-forest text-sm flex items-start gap-2.5">
+        <CheckCircle2 className="w-[18px] h-[18px] shrink-0 mt-px" aria-hidden="true" />
+        <span>{success}</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
   // Navigation & Interactive modal state
   const [isLoginWindowOpen, setIsLoginWindowOpen] = useState(false);
@@ -201,12 +355,40 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
   const [custodianName, setCustodianName] = useState('');
   const [knowledgeLevel, setKnowledgeLevel] = useState('Know 2-3 generations');
 
+  const closeLoginWindow = () => {
+    setIsLoginWindowOpen(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setDraftUser(null);
+    setIsForgotPassword(false);
+  };
+
+  // Close the sign-in window with the Escape key
+  useEffect(() => {
+    if (!isLoginWindowOpen || showOAuthPopup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLoginWindow();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isLoginWindowOpen, showOAuthPopup]);
+
+  const openSignIn = () => {
+    setIsSignUp(false);
+    setIsLoginWindowOpen(true);
+  };
+
+  const openSignUp = () => {
+    setIsSignUp(true);
+    setIsLoginWindowOpen(true);
+  };
+
   const handleForgotSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
     if (!forgotEmail) {
-      setErrorMsg('Kindly enter your registered email identifier.');
+      setErrorMsg('Please enter your email address.');
       return;
     }
     setIsLoading(true);
@@ -223,15 +405,15 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     setSuccessMsg('');
 
     if (!email) {
-      setErrorMsg('Kindly enter a valid email address.');
+      setErrorMsg('Please enter your email address.');
       return;
     }
     if (!password || password.length < 5) {
-      setErrorMsg('Password should be at least 5 characters long.');
+      setErrorMsg('Your password needs at least 5 characters.');
       return;
     }
     if (isSignUp && !fullName) {
-      setErrorMsg('Kindly tell us your name so we can label your pedigree line.');
+      setErrorMsg('Please enter your name.');
       return;
     }
 
@@ -241,7 +423,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     setTimeout(() => {
       setIsLoading(false);
       const computedName = isSignUp ? fullName : email.split('@')[0];
-      setSuccessMsg(`Identity verified! Tell us a few words about your roots...`);
+      setSuccessMsg('Signed in. Just a few questions about your roots…');
       
       setTimeout(() => {
         setSuccessMsg('');
@@ -289,386 +471,290 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
   };
 
   return (
-    <div id="login-gate-screen" className="min-h-screen bg-[#111110] text-[#fcfbfa] flex flex-col relative overflow-x-hidden select-none font-sans">
+    <div id="login-gate-screen" className="min-h-screen bg-cream text-[#fcfbfa] flex flex-col relative overflow-x-hidden font-sans">
       
-      {/* GLOBAL AMBIENT BACKGROUND GLOW EFFECTS */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
-        <div className="absolute top-[10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-[#E2A04F]/10 blur-[150px]" />
-        <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[150px]" />
-        <svg className="absolute inset-0 w-full h-full stroke-white/[0.03] stroke-[0.5]" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
+      {/* ===================== LANDING PAGE ===================== */}
+      <div className="relative z-10 bg-cream text-ink min-h-screen">
 
-      {/* HEADER BAR */}
-      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 py-6 flex items-center justify-between border-b border-white/[0.07]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 border border-[#fcfbfa]/20 bg-[#E2A04F] flex items-center justify-center rotate-2 rounded-sm shadow-sm shrink-0">
-            <Heart className="w-5 h-5 text-black fill-black" />
-          </div>
-          <div>
-            <h2 className="font-display font-black text-xl tracking-tight text-white flex items-center gap-2 leading-none">
-              Afrolineo
-              <span className="text-[9px] uppercase font-sans font-bold tracking-widest bg-[#E2A04F]/20 text-[#E2A04F] py-0.5 px-2 rounded-sm">
-                Sovereign Vault
+        {/* Header */}
+        <header className="border-b border-line">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+            <a href="#top" className="flex items-center gap-2.5 text-ink no-underline">
+              <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
+                <LineageMark className="w-5 h-5 text-[#E2A04F]" />
               </span>
-            </h2>
-            <span className="text-[9px] uppercase tracking-[0.25em] text-gray-500 font-sans block mt-1 leading-none font-bold">
-              Oral History & Pedigree Mapping
-            </span>
-          </div>
-        </div>
-
-        {/* Header CTA - Elegant login button as requested */}
-        <button
-          onClick={() => setIsLoginWindowOpen(true)}
-          className="px-5 py-2.5 bg-[#E2A04F]/10 border border-[#E2A04F]/30 hover:border-[#E2A04F] text-[#E2A04F] hover:text-white rounded-md text-xs uppercase tracking-widest font-black transition-all cursor-pointer shadow-sm flex items-center gap-2"
-        >
-          <span>Unlock Vault</span>
-          <ArrowRight className="w-3.5 h-3.5 text-[#E2A04F]" />
-        </button>
-      </header>
-
-      {/* HERO HERO HERO LANDING PRESENTATION SECTION */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 sm:px-12 pt-16 pb-20 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#E2A04F]/10 border border-[#E2A04F]/25 text-[#E2A04F] rounded-full text-[9px] font-sans font-black uppercase tracking-widest leading-none mx-auto">
-          <Radio className="w-3 h-3 text-[#E2A04F] animate-pulse" />
-          Welcome, Sovereign Seeker
-        </div>
-
-        <h1 className="font-serif font-black text-4xl sm:text-5xl lg:text-6xl text-white tracking-tight leading-[1.1] max-w-4xl mx-auto">
-          To reclaim what was <span className="text-[#E2A04F]">scattered</span> <br />is to define where you stand.
-        </h1>
-
-        <p className="text-gray-300 font-sans text-sm sm:text-lg leading-relaxed max-w-3xl mx-auto font-light">
-          Our ancestors mapped their world not with ink on paper, but in the echoes of stories shared. For generations, family lineages were kept alive by firesides, in quiet kitchens, and on porch swings across local communities.
-        </p>
-
-        {/* LANDING PAGE ONLY HAS A LOGIN BUTTON (As requested: "Let the landing page only have a login button") */}
-        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button
-            onClick={() => setIsLoginWindowOpen(true)}
-            className="w-full sm:w-auto px-10 py-4.5 bg-[#E2A04F] hover:bg-[#E2A04F]/90 text-black rounded-lg font-sans font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-[0_10px_35px_rgba(226,160,79,0.25)] flex items-center justify-center gap-3 cursor-pointer group hover:scale-[1.02]"
-          >
-            <span>Begin Ancestral Mapping</span>
-            <ArrowRight className="w-5 h-5 text-black group-hover:translate-x-1.5 transition-transform" />
-          </button>
-        </div>
-
-        {/* Scroll Indicator Accent */}
-        <div className="pt-8 flex flex-col items-center gap-2 text-gray-500 animate-bounce">
-          <span className="text-[9px] uppercase tracking-widest font-bold">Discover More Underneath</span>
-          <ChevronDown className="w-4 h-4 text-[#E2A04F]/60" />
-        </div>
-      </section>
-
-      {/* THREE PICTURES MASSIVE ARCHIVE PORTRAITS (African descent storytelling highlights) */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Elder Portrait Card */}
-          <div className="group relative rounded-2xl overflow-hidden border border-gray-800/80 hover:border-[#E2A04F]/50 shadow-xl transition-all duration-300 bg-[#161514]">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#E2A04F]" />
-            <div className="aspect-[4/5] w-full overflow-hidden relative">
-              <img 
-                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop" 
-                alt="African Heritage Grandmother storytelling" 
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-102 group-hover:scale-100"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#111110] via-black/30 to-transparent" />
-            </div>
-            <div className="p-5 relative z-10 bg-[#161514]">
-              <span className="text-[8px] text-[#E2A04F] font-black uppercase tracking-[0.2em] block mb-1">SECTION I: THE ELDERS</span>
-              <h3 className="font-serif font-black text-lg text-white mb-2">Preserving Oral Transcripts</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Connect your microphone to capture organic audio files of stories, accents, and local kinship paths from home before they are lost to time.
-              </p>
-            </div>
-          </div>
-
-          {/* Young Seeker Portrait Card */}
-          <div className="group relative rounded-2xl overflow-hidden border border-gray-800/80 hover:border-[#E2A04F]/50 shadow-xl transition-all duration-300 bg-[#161514]">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#E2A04F]" />
-            <div className="aspect-[4/5] w-full overflow-hidden relative">
-              <img 
-                src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?q=80&w=600&auto=format&fit=crop" 
-                alt="Young descendant tracing kin history" 
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-102 group-hover:scale-100"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#111110] via-black/30 to-transparent" />
-            </div>
-            <div className="p-5 relative z-10 bg-[#161514]">
-              <span className="text-[8px] text-[#E2A04F] font-black uppercase tracking-[0.2em] block mb-1">SECTION II: THE SEEKERS</span>
-              <h3 className="font-serif font-black text-lg text-white mb-2">Ancestral Lineage Search</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Reconstruct pedigree nodes across communities. Cross-reference geographical coordinates of West-African lineage origins with historical records.
-              </p>
-            </div>
-          </div>
-
-          {/* Family Kinship Portrait Card */}
-          <div className="group relative rounded-2xl overflow-hidden border border-gray-800/80 hover:border-emerald-500/50 shadow-xl transition-all duration-300 bg-[#161514]">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-emerald-500" />
-            <div className="aspect-[4/5] w-full overflow-hidden relative">
-              <img 
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop" 
-                alt="Diverse black family smiles" 
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-102 group-hover:scale-100"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#111110] via-black/30 to-transparent" />
-            </div>
-            <div className="p-5 relative z-10 bg-[#161514]">
-              <span className="text-[8px] text-emerald-400 font-black uppercase tracking-[0.2em] block mb-1">SECTION III: THE CLANSMEN</span>
-              <h3 className="font-serif font-black text-lg text-white mb-2">Secure Sovereign Backups</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                You retain absolute ownership of your pedigree metrics. Download offline-first JSON archives with nested media links securely anytime.
-              </p>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* UNDERNEATH SECTION (As requested: "underneath the landing page we can have...") */}
-      <section id="landing-underneath-features" className="relative z-10 w-full border-t border-white/[0.07] bg-[#141312] py-20">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          
-          <div className="space-y-6">
-            <span className="text-[#E2A04F] text-[10px] font-sans font-black uppercase tracking-[0.22em] block">
-              AUTHENTIC AFRICAN ARCHIVES METRICS
-            </span>
-            <h2 className="font-serif font-black text-3xl sm:text-4xl text-white leading-tight">
-              An offline-first sanctuary built on zero third-party indexing constraints.
-            </h2>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
-              Too often, genealogical services turn sacred memories into commercial indices. We believe your kinship structures belong strictly to you and your progeny. Afrolineo provides high-fidelity tools to map bloodlines safely.
-            </p>
-
-            {/* Micro feature check bullets */}
-            <div className="space-y-3.5 pt-2">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-[#E2A04F] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-sans font-black text-white uppercase tracking-wider">Dynamic Kinship Node Map</h4>
-                  <p className="text-xs text-gray-400">Map nodes visually, assigning custom origin details such as native clans or oral aliases.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-[#E2A04F] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-sans font-black text-white uppercase tracking-wider">Localized Cultural Geography</h4>
-                  <p className="text-xs text-gray-400">Link lineages directly to ancestral villages, physical monuments, or specific regional birthplaces.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-[#E2A04F] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-sans font-black text-white uppercase tracking-wider">Lossless Audio Studio and Player</h4>
-                  <p className="text-xs text-gray-400">Log detailed transcripts, oral minutes recorded, and link raw narration files directly into corresponding profiles.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button
-                onClick={() => setIsLoginWindowOpen(true)}
-                className="px-6 py-3 bg-[#E2A04F] hover:bg-[#E2A04F]/90 text-black rounded-md font-sans font-black text-xs uppercase tracking-widest transition-colors cursor-pointer"
-              >
-                Access Sovereign Vault Sandbox
+              <span className="font-display text-xl sm:text-[22px] font-semibold tracking-tight">Afrolineo</span>
+            </a>
+            <nav aria-label="Main" className="hidden md:flex gap-7 text-[15px] font-medium">
+              <a href="#how" className="text-ink-soft hover:text-ink">How it works</a>
+              <a href="#stories" className="text-ink-soft hover:text-ink">Stories</a>
+              <a href="#privacy" className="text-ink-soft hover:text-ink">Privacy</a>
+            </nav>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={openSignIn} className="px-3 sm:px-4 py-3 text-[15px] font-semibold text-ink rounded-full hover:bg-sand cursor-pointer whitespace-nowrap">
+                Sign in
+              </button>
+              <button type="button" onClick={openSignUp} className="px-4 sm:px-5 py-3 text-[15px] font-semibold text-ink bg-ochre hover:brightness-95 rounded-full cursor-pointer whitespace-nowrap">
+                Start free
               </button>
             </div>
           </div>
+        </header>
 
-          <div className="relative p-6 sm:p-10 border border-white/[0.06] rounded-2xl bg-[#1a1918] overflow-hidden shadow-inner group">
-            {/* Top gold line highlight */}
-            <div className="absolute top-0 right-0 left-0 h-[2px] bg-[#E2A04F]/60" />
-            
-            <h3 className="font-serif font-black text-xl text-white mb-6">Sovereign Vault Integrity Guidelines</h3>
-            
-            <div className="space-y-4 text-xs text-gray-400">
-              <div className="p-3 bg-[#111110] border border-gray-800 rounded flex gap-3">
-                <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
-                <div>
-                  <strong className="text-white">Strict Privacy</strong>
-                  <p className="mt-0.5">Your files are stored inside your browser's persistent sandbox. No metadata leaks to centralized AI models.</p>
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#111110] border border-gray-800 rounded flex gap-3">
-                <Mic className="w-5 h-5 text-[#E2A04F] shrink-0" />
-                <div>
-                  <strong className="text-white">Lossless Oral Transcript Encoding</strong>
-                  <p className="mt-0.5">Lossless audio logs can be integrated per pedigree node to secure raw voice accents of kin grandparents.</p>
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#111110] border border-gray-800 rounded flex gap-3">
-                <Network className="w-5 h-5 text-sky-400 shrink-0" />
-                <div>
-                  <strong className="text-white">Structured Local Interoperability</strong>
-                  <p className="mt-0.5">Full support to import and export standard JSON files easily, keeping your heritage completely independent.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 text-center p-4 bg-emerald-950/20 border border-emerald-800/40 rounded-sm">
-              <span className="text-[10px] text-emerald-400 font-sans tracking-widest uppercase font-black">✔ ZERO TRACKERS FOUND</span>
-              <p className="text-[10px] text-gray-400 mt-1">Ready to host your family lineage records securely.</p>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* RICH FOOTER BAR */}
-      <footer className="relative z-10 w-full border-t border-white/[0.08] bg-[#0c0c0b] py-16 text-xs text-gray-400 font-sans">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mb-12 text-left">
-            
-            {/* Branding Column */}
-            <div className="md:col-span-3 space-y-4">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-[#E2A04F]" />
-                <span className="font-sans font-black text-white tracking-wider uppercase text-sm">Afrolineo</span>
-              </div>
-              <p className="text-xs text-gray-400 leading-relaxed font-serif italic max-w-sm">
-                Preserving oral history, sovereign lineages, and localized cultural geography across ancestral compounds.
-              </p>
-              <div className="text-[10px] text-gray-500 font-mono">
-                Platform Local Time: 2026 • Live Heritage Node
-              </div>
-            </div>
-
-            {/* Explore Section */}
-            <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans font-black">Explore</h4>
-              <ul className="space-y-2 text-xs">
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('articles'); }} className="text-gray-400 hover:text-white transition-colors">Articles</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSitemapLanding(true); }} className="text-gray-400 hover:text-white font-semibold text-[#E2A04F] transition-colors">Sitemap</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('gifts'); }} className="text-gray-400 hover:text-white transition-colors">Gifts</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('customer-stories'); }} className="text-gray-400 hover:text-white transition-colors">Customer Stories</a></li>
-              </ul>
-            </div>
-
-            {/* About Section */}
-            <div className="md:col-span-3 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans font-black">About</h4>
-              <ul className="space-y-2 text-xs">
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('dei'); }} className="text-gray-400 hover:text-white transition-colors">Diversity, Equity, and Inclusion</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('careers'); }} className="text-gray-400 hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('newsroom'); }} className="text-gray-400 hover:text-white transition-colors">Newsroom</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('security'); }} className="text-gray-400 hover:text-white transition-colors">Security</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('privacy'); }} className="text-gray-400 hover:text-white transition-colors">Privacy</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('guidelines'); }} className="text-gray-400 hover:text-white transition-colors">User Guidelines</a></li>
-              </ul>
-            </div>
-
-            {/* Terms & Support Section */}
-            <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans font-black">Terms & Support</h4>
-              <ul className="space-y-2 text-xs">
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('terms'); }} className="text-gray-400 hover:text-white transition-colors">Terms</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('social-impact'); }} className="text-gray-400 hover:text-white transition-colors">Social Impact</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('community-impact'); }} className="text-gray-400 hover:text-white transition-colors">Afrolineo in your Community</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveAboutTabLanding('support'); }} className="text-gray-400 hover:text-white transition-colors">Support</a></li>
-              </ul>
-            </div>
-
-            {/* Social Section */}
-            <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans font-black">Social</h4>
-              <ul className="space-y-2 text-xs">
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">Twitter</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">Instagram</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">Facebook</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">YouTube</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">LinkedIn</a></li>
-              </ul>
-            </div>
-
-          </div>
-
-          {/* Bottom attribution copyright bar */}
-          <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500 text-center md:text-left">
-            <p>© 2026 Afrolineo Community Heritage Vault. Trace Your Land, Live Your Story.</p>
-            <p className="text-[10px] text-gray-600 font-mono">
-              Built specifically for mapping sacred African and native oral genealogy networks.
+        {/* Hero */}
+        <section id="top" className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-20 sm:pt-20 sm:pb-24 grid gap-14 lg:grid-cols-2 items-center">
+          <div>
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-paternal-ink bg-ochre-tint px-3.5 py-1.5 rounded-full">
+              <Mic className="w-4 h-4" aria-hidden="true" />
+              Oral history &amp; family trees for African families
             </p>
+            <h1 className="mt-5 font-display font-medium text-[42px] sm:text-6xl lg:text-[68px] leading-[1.04] tracking-[-0.025em]">
+              Every family has a story. <span className="italic text-[#9A5B14]">Keep yours.</span>
+            </h1>
+            <p className="mt-6 text-lg sm:text-[19px] leading-relaxed text-[#4A423A] max-w-[520px]">
+              Record your elders in their own voices, map your lineage back to the family compound, and keep it all somewhere only your family controls.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <button type="button" onClick={openSignUp} className="inline-flex items-center gap-2.5 bg-ochre hover:brightness-95 text-ink font-semibold px-7 py-4 rounded-full cursor-pointer group">
+                Start your family tree
+                <ArrowRight className="w-[18px] h-[18px] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </button>
+              <a href="#how" className="inline-flex items-center gap-2.5 border-[1.5px] border-[#CFC4B4] hover:border-ink text-ink font-semibold px-6 py-[15px] rounded-full">
+                See how it works
+              </a>
+            </div>
+            <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2.5 text-[14.5px] text-[#4A423A]">
+              {['Free to start', 'Works in your browser', 'Export everything, anytime'].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <Check className="w-[18px] h-[18px] text-forest" strokeWidth={2.4} aria-hidden="true" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      </footer>
 
-      {/* LOGIN WINDOW (MODAL DIALOG POPUP AS REQUESTED: "i want the login panel to be on the login window.") */}
+          {/* Product preview */}
+          <div className="flex flex-col" aria-hidden="true">
+            <div className="bg-white border border-[#E6DED2] rounded-[22px] px-6 pt-6 pb-[72px] shadow-[0_24px_60px_-30px_rgba(60,40,15,0.35)]">
+              <div className="flex justify-between items-center gap-3 mb-7">
+                <div>
+                  <div className="font-display text-xl font-semibold">Babajide family</div>
+                  <div className="text-[13px] text-muted">8 people · 3 generations</div>
+                </div>
+                <span className="text-[13px] font-semibold text-forest bg-forest-tint px-3 py-1 rounded-full">4 stories</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="flex gap-12">
+                  <div className="flex gap-2.5">
+                    <PreviewAvatar initials="AO" className="bg-paternal-tint text-paternal-ink" />
+                    <PreviewAvatar dashed />
+                  </div>
+                  <div className="flex gap-2.5">
+                    <PreviewAvatar dashed />
+                    <PreviewAvatar initials="GN" className="bg-forest-tint text-forest ring-2 ring-ochre ring-offset-[3px]" />
+                  </div>
+                </div>
+                <div className="flex gap-[150px] h-6.5">
+                  <span className="w-0.5 bg-[#D5C8B5]" />
+                  <span className="w-0.5 bg-[#D5C8B5]" />
+                </div>
+                <div className="flex items-center">
+                  <PreviewAvatar initials="OB" size="lg" className="bg-paternal-tint text-paternal-ink" />
+                  <span className="w-[100px] h-0.5 bg-[#D5C8B5]" />
+                  <PreviewAvatar initials="ZO" size="lg" className="bg-forest-tint text-forest" />
+                </div>
+                <span className="w-0.5 h-6.5 bg-[#D5C8B5]" />
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="w-[60px] h-[60px] rounded-full bg-ink text-cream font-bold flex items-center justify-center">AA</span>
+                  <span className="text-[13px] font-semibold">You</span>
+                </div>
+              </div>
+            </div>
+            <div className="relative -mt-13 ml-auto w-full max-w-[380px] bg-ink text-[#F3EDE3] rounded-[20px] p-5 shadow-[0_24px_50px_-24px_rgba(31,27,23,0.6)]">
+              <div className="flex gap-3.5 items-center">
+                <span className="shrink-0 w-12 h-12 rounded-full bg-ochre flex items-center justify-center">
+                  <Play className="w-5 h-5 text-ink fill-ink ml-0.5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="font-semibold text-[15.5px]">Anambra migration &amp; market roots</div>
+                  <div className="text-[13px] text-[#BDB2A4]">Grandmother Nneka · 2:58</div>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-[3px] h-9">
+                {WAVEFORM.map((h, i) => (
+                  <span key={i} className={`flex-1 rounded-[2px] ${i < 15 ? 'bg-ochre' : 'bg-[#5A5047]'}`} style={{ height: `${h}%` }} />
+                ))}
+              </div>
+              <p className="mt-3.5 font-display italic text-[15px] leading-normal text-[#E5DCCD]">
+                “We left in the dry season, carrying the seed yams and the names of our fathers…”
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <PatternBand />
+
+        {/* How it works */}
+        <section id="how" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24 scroll-mt-4">
+          <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">How it works</p>
+          <h2 className="mt-3 font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em] max-w-[760px]">
+            From a grandmother’s voice to a family tree you can pass on.
+          </h2>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {HOW_IT_WORKS.map((step, i) => (
+              <article key={step.title} className="bg-white border border-[#E6DED2] rounded-[20px] p-7 sm:p-8">
+                <div className="flex justify-between items-center">
+                  <span className={`w-13 h-13 rounded-[14px] flex items-center justify-center ${step.tint}`}>
+                    <step.icon className="w-6 h-6" aria-hidden="true" />
+                  </span>
+                  <span className="font-display text-[28px] text-[#B8AB98]">0{i + 1}</span>
+                </div>
+                <h3 className="mt-7 mb-2 font-sans text-[21px] font-semibold">{step.title}</h3>
+                <p className="text-[#4A423A] leading-relaxed">{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Stories */}
+        <section id="stories" className="bg-sand scroll-mt-4">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24 grid gap-14 lg:grid-cols-2 items-center">
+            <div className="bg-white border border-line rounded-[22px] p-6 sm:p-7">
+              <div className="flex items-center gap-3.5">
+                <span className="w-12 h-12 rounded-full bg-forest-tint text-forest font-bold flex items-center justify-center">GN</span>
+                <div>
+                  <div className="font-semibold">Grandmother Nneka</div>
+                  <div className="text-[13.5px] text-muted">Recorded in Igbo · Okeke Palace Compound</div>
+                </div>
+                <span className="ml-auto text-[12.5px] font-semibold text-muted border border-line px-2.5 py-1 rounded-full">Sample</span>
+              </div>
+              <div className="mt-6 flex flex-col gap-4">
+                {SAMPLE_TRANSCRIPT.map((line, i) => (
+                  <div key={line.time} className={`flex gap-4 ${i === 1 ? 'bg-[#FBF4E8] -mx-3 p-3 rounded-xl' : ''}`}>
+                    <span className="shrink-0 w-10 pt-1 text-[13px] font-semibold text-ochre-deep">{line.time}</span>
+                    <p className={`font-display text-lg leading-relaxed ${i === 2 ? 'text-muted' : 'text-[#2D2926]'}`}>{line.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">Stories</p>
+              <h2 className="mt-3 font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em]">Voices, not just names.</h2>
+              <p className="mt-5 text-lg text-[#4A423A] max-w-[480px] leading-relaxed">
+                A name on a chart tells you who someone was. Their voice tells you how they spoke, what they remembered and what they wanted you to know.
+              </p>
+              <ul className="mt-8 flex flex-col gap-5">
+                {STORY_POINTS.map((point) => (
+                  <li key={point.title} className="flex gap-3.5">
+                    <Check className="w-[22px] h-[22px] text-forest shrink-0 mt-0.5" strokeWidth={2.4} aria-hidden="true" />
+                    <span><strong className="font-semibold">{point.title}</strong> <span className="text-[#4A423A]">{point.body}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Privacy */}
+        <section id="privacy" className="bg-ink text-[#F3EDE3] scroll-mt-4">
+          <PatternBand />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
+            <h2 className="font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em] text-cream max-w-[720px]">
+              Your family’s memory belongs to your family.
+            </h2>
+            <div className="mt-12 grid gap-10 md:grid-cols-3">
+              {PRIVACY_POINTS.map((point) => (
+                <div key={point.title}>
+                  <point.icon className="w-7 h-7 text-[#E2A04F]" strokeWidth={1.8} aria-hidden="true" />
+                  <h3 className="mt-4 mb-2 font-sans text-[19px] font-semibold text-cream">{point.title}</h3>
+                  <p className="text-[#C9BFB1] leading-relaxed">{point.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Final call to action */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 sm:py-28 text-center">
+          <h2 className="font-display font-medium text-4xl sm:text-[56px] leading-[1.08] tracking-[-0.02em]">Start with one story.</h2>
+          <p className="mt-4 mx-auto text-lg sm:text-[19px] text-[#4A423A] max-w-[520px]">
+            Begin with the oldest person you know. One recording is enough to start a family archive.
+          </p>
+          <button type="button" onClick={openSignUp} className="mt-9 inline-flex items-center gap-2.5 bg-ochre hover:brightness-95 text-ink font-semibold text-[17px] px-8 py-[18px] rounded-full cursor-pointer group">
+            Start your family tree
+            <ArrowRight className="w-[18px] h-[18px] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </button>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-[#E6DED2]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-wrap justify-between items-center gap-4 text-[14.5px] text-muted">
+            <span><span className="font-display font-semibold text-ink text-[17px]">Afrolineo</span> · © 2026</span>
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+              {FOOTER_LINKS.map((link) => (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => (link.tab ? setActiveAboutTabLanding(link.tab) : setShowSitemapLanding(true))}
+                  className="text-muted hover:text-ink underline-offset-4 hover:underline cursor-pointer"
+                >
+                  {link.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </footer>
+      </div>
+
+      {/* ===================== SIGN-IN WINDOW ===================== */}
       {isLoginWindowOpen && (
-        <div id="login-window-overlay" className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn select-none">
-          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#1a1918] border border-[#E2A04F]/50 rounded-2xl p-6 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.8)] group">
-            
-            {/* Top gold highlight line styling */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E2A04F]/40 via-[#E2A04F] to-[#E2A04F]/40" />
-
-            {/* Absolute close button */}
+        <div
+          id="login-window-overlay"
+          className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50 animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeLoginWindow();
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-window-title"
+            className="relative w-full sm:max-w-[440px] max-h-[94vh] overflow-y-auto bg-cream text-ink rounded-t-3xl sm:rounded-3xl px-6 pt-7 pb-8 sm:px-8 shadow-[0_30px_80px_-20px_rgba(31,27,23,0.55)]"
+          >
             <button
-              onClick={() => {
-                setIsLoginWindowOpen(false);
-                setErrorMsg('');
-                setSuccessMsg('');
-                setDraftUser(null);
-              }}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              title="Close Login Window"
+              type="button"
+              onClick={closeLoginWindow}
+              aria-label="Close"
+              className="absolute top-3 right-3 w-11 h-11 rounded-full text-muted hover:text-ink hover:bg-sand flex items-center justify-center cursor-pointer"
             >
-              <CloseIcon className="w-4 h-4" />
+              <CloseIcon className="w-5 h-5" />
             </button>
 
             {draftUser ? (
-              /* ========================================================= */
-              /* STEP 2: PERSONAL DETAILS INPUT FOR CUSTOMIZING ANCESTRY  */
-              /* ========================================================= */
-              <div className="space-y-5 animate-fadeIn">
-                <div>
-                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <h3 className="text-xl font-serif font-black text-white">
-                    Ancestral Profiler Guidance
-                  </h3>
-                  <p className="text-[9px] text-[#E2A04F] tracking-wider uppercase font-sans mt-0.5 font-bold">
-                    Guide the product on your ancestral roots
-                  </p>
-                </div>
-
-                <p className="text-xs text-gray-400 leading-relaxed font-light">
-                  Welcome, <strong className="text-white">{draftUser.name}</strong>. Kindly share these foundational details so we can tailor transcription helper algorithms, tree nodes, and recording checklists specifically to your lineage.
+              /* ---------- Step 2: about your roots ---------- */
+              <div className="animate-fadeIn">
+                <p className="text-sm font-semibold text-ochre-deep">Step 2 of 2</p>
+                <h2 id="login-window-title" className="mt-1 font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
+                  Tell us about your roots
+                </h2>
+                <p className="mt-2 text-[15px] text-muted leading-relaxed">
+                  Welcome, <strong className="text-ink font-semibold">{draftUser.name}</strong>. This helps us suggest the right languages and interview questions for your family.
                 </p>
 
-                <div className="space-y-4 pt-1">
-                  
-                  {/* Select Country Focus */}
+                <div className="mt-6 space-y-4">
                   <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      Country or Core Native Region
-                    </label>
+                    <label htmlFor="ancestry-country" className={LABEL_CLASS}>Country</label>
                     <select
+                      id="ancestry-country"
                       value={ancestralCountry}
                       onChange={(e) => {
                         const country = e.target.value;
                         setAncestralCountry(country);
                         setAncestralState('');
                         setAncestralWard('');
-                        const defaultEth = ETHNIC_GROUPS_BY_COUNTRY[country]?.[0] || 'Other Ancestral Group';
-                        setEthnicGroup(defaultEth);
+                        setEthnicGroup(ETHNIC_GROUPS_BY_COUNTRY[country]?.[0] || 'Other Ancestral Group');
                       }}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white outline-none transition-colors"
+                      className={FIELD_CLASS}
                     >
                       <option value="Nigeria">Nigeria</option>
                       <option value="Ghana">Ghana</option>
@@ -677,57 +763,55 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       <option value="South Africa">South Africa</option>
                       <option value="Zimbabwe">Zimbabwe</option>
                       <option value="Angola / Congo-Zaire">Angola / Congo-Zaire</option>
-                      <option value="Other African Native Region">Other African Region</option>
+                      <option value="Other African Native Region">Another African country</option>
                     </select>
                   </div>
 
-                  {/* Select State / Region Focus (New Dropdown option as requested) */}
-                  <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      Ancestral State / Region / Province (Optional Dropdown)
-                    </label>
-                    <select
-                      value={ancestralState}
-                      onChange={(e) => {
-                        setAncestralState(e.target.value);
-                        setAncestralWard('');
-                      }}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white outline-none transition-colors"
-                    >
-                      <option value="">-- Select State/Region (Optional) --</option>
-                      {(STATES_BY_COUNTRY[ancestralCountry] || []).map((st) => (
-                        <option key={st} value={st}>{st}</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="ancestry-state" className={LABEL_CLASS}>
+                        State or region <span className="font-normal text-muted">(optional)</span>
+                      </label>
+                      <select
+                        id="ancestry-state"
+                        value={ancestralState}
+                        onChange={(e) => {
+                          setAncestralState(e.target.value);
+                          setAncestralWard('');
+                        }}
+                        className={FIELD_CLASS}
+                      >
+                        <option value="">Choose…</option>
+                        {(STATES_BY_COUNTRY[ancestralCountry] || []).map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="ancestry-ward" className={LABEL_CLASS}>
+                        Ward or district <span className="font-normal text-muted">(optional)</span>
+                      </label>
+                      <select
+                        id="ancestry-ward"
+                        value={ancestralWard}
+                        onChange={(e) => setAncestralWard(e.target.value)}
+                        className={FIELD_CLASS}
+                      >
+                        <option value="">Choose…</option>
+                        {getWardsForState(ancestralState).map((wd) => (
+                          <option key={wd} value={wd}>{wd}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  {/* Select Ward / District Focus (New Dropdown option as requested, visible if State matches or custom) */}
                   <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      Ancestral Ward / District (Optional Dropdown)
-                    </label>
-                    <select
-                      value={ancestralWard}
-                      onChange={(e) => setAncestralWard(e.target.value)}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white outline-none transition-colors"
-                    >
-                      <option value="">-- Select Ward/District (Optional) --</option>
-                      {getWardsForState(ancestralState).map((wd) => (
-                        <option key={wd} value={wd}>{wd}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Pre-colonial ethnic identity */}
-                  <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      Pre-Colonial Ethnic Group / Dialect Dropdown
-                    </label>
+                    <label htmlFor="ancestry-ethnic" className={LABEL_CLASS}>Ethnic group or language</label>
                     <select
                       id="ancestry-ethnic"
                       value={ethnicGroup}
                       onChange={(e) => setEthnicGroup(e.target.value)}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white outline-none transition-colors font-sans"
+                      className={FIELD_CLASS}
                     >
                       {getEthnicGroupsForCountry(ancestralCountry).map((eth) => (
                         <option key={eth} value={eth}>{eth}</option>
@@ -735,48 +819,61 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </select>
                   </div>
 
-                  {/* Custodian Grandparent / Elder Name to write */}
                   <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      Lead Elder Custodian to document first
+                    <label htmlFor="ancestry-custodian" className={LABEL_CLASS}>
+                      Who would you like to record first? <span className="font-normal text-muted">(optional)</span>
                     </label>
-                    <input 
+                    <input
                       id="ancestry-custodian"
                       type="text"
-                      placeholder="e.g. Grandma Nneka, Papa Alao, Chief Olakunle"
+                      placeholder="e.g. Grandma Nneka, Papa Alao"
                       value={custodianName}
                       onChange={(e) => setCustodianName(e.target.value)}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white placeholder-gray-700 outline-none transition-colors font-sans"
+                      className={FIELD_CLASS}
                     />
                   </div>
 
-                  {/* Progress / Generations known */}
-                  <div>
-                    <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1.5">
-                      How deep is your current lineage documentation?
-                    </label>
-                    <select
-                      value={knowledgeLevel}
-                      onChange={(e) => setKnowledgeLevel(e.target.value)}
-                      className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded text-xs text-white outline-none transition-colors"
-                    >
-                      <option value="Just starting out">Just starting (0-1 generations known)</option>
-                      <option value="Know 2-3 generations">Moderately documented (Parents, Grandparents)</option>
-                      <option value="Pre-colonial dynasty archivist">Deep native archives (4+ generations mapped)</option>
-                    </select>
-                  </div>
-
+                  <fieldset>
+                    <legend className={LABEL_CLASS}>How much of your family history do you know?</legend>
+                    <div className="grid gap-2">
+                      {KNOWLEDGE_OPTIONS.map((opt) => {
+                        const checked = knowledgeLevel === opt.value;
+                        return (
+                          <label
+                            key={opt.value}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
+                              checked ? 'border-ochre bg-white ring-2 ring-ochre/25' : 'border-line bg-white/60 hover:bg-white'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="knowledge-level"
+                              value={opt.value}
+                              checked={checked}
+                              onChange={() => setKnowledgeLevel(opt.value)}
+                              className="w-4 h-4 accent-[#9A5B14]"
+                            />
+                            <span>
+                              <span className="block text-[15px] font-semibold leading-tight">{opt.title}</span>
+                              <span className="block text-[13px] text-muted">{opt.body}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
                 </div>
 
-                <div className="pt-3 flex gap-3">
+                <div className="mt-7 flex gap-3">
                   <button
                     type="button"
                     onClick={() => setDraftUser(null)}
-                    className="flex-1 py-3 border border-gray-800 hover:border-gray-750 text-gray-400 text-[10px] font-sans font-black uppercase tracking-widest rounded-sm cursor-pointer"
+                    className="h-12 px-5 rounded-full border-[1.5px] border-[#CFC4B4] font-semibold hover:border-ink cursor-pointer"
                   >
                     Back
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       onLoginSuccess({
                         email: draftUser.email,
@@ -787,389 +884,232 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         custodianName: custodianName || 'Grandmother Nneka',
                         knowledgeLevel,
                         ancestralState,
-                        ancestralWard
+                        ancestralWard,
                       });
                     }}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black py-3 rounded-sm font-sans font-black text-[10px] uppercase tracking-widest transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:scale-[1.01]"
+                    className="flex-1 h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Mount Vault</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    Open my family tree
+                    <ArrowRight className="w-[18px] h-[18px]" aria-hidden="true" />
                   </button>
                 </div>
               </div>
-            ) : (
-              /* ========================================================= */
-              /* STEP 1: INITIAL PASS CREDENTIALS SUBMISSION               */
-              /* ========================================================= */
+            ) : isForgotPassword ? (
+              /* ---------- Forgot password ---------- */
               <div className="animate-fadeIn">
-                {isForgotPassword ? (
-                  /* ========================================================= */
-                  /* SUB-STEP: FORGOT PASSWORD RESET PROTOCOL (NEW)           */
-                  /* ========================================================= */
-                  <div className="space-y-6 animate-fadeIn py-2">
+                <h2 id="login-window-title" className="font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
+                  Reset your password
+                </h2>
+                <p className="mt-2 text-[15px] text-muted">Enter your email and we’ll send you a link to choose a new one.</p>
+
+                <StatusMessage error={errorMsg} success={isForgotSubmitted ? '' : successMsg} />
+
+                {!isForgotSubmitted ? (
+                  <form onSubmit={handleForgotSubmit} className="mt-6 space-y-4">
                     <div>
-                      <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#E2A04F]/10 text-[#E2A04F] border border-[#E2A04F]/25 mb-3">
-                        <HelpCircle className="w-5 h-5 text-[#E2A04F]" />
-                      </div>
-                      <h3 className="text-2xl font-serif font-black text-white">
-                        Recover Secure Passport
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Securely restore credentials access to your local sovereign vault
-                      </p>
+                      <label htmlFor="forgot-email" className={LABEL_CLASS}>Email</label>
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        disabled={isLoading}
+                        className={FIELD_CLASS}
+                        required
+                      />
                     </div>
-
-                    {/* Status signals inside forgot password form */}
-                    {errorMsg && (
-                      <div className="p-4.5 bg-red-950/45 border border-red-800/40 text-red-200 text-xs rounded-sm flex items-center gap-2.5 animate-pulse">
-                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                        <span className="font-semibold">{errorMsg}</span>
-                      </div>
-                    )}
-
-                    {successMsg && (
-                      <div className="p-4.5 bg-emerald-950/45 border border-emerald-800/40 text-emerald-200 text-xs rounded-sm flex items-center gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span className="font-semibold">{successMsg}</span>
-                      </div>
-                    )}
-
-                    {!isForgotSubmitted ? (
-                      <form onSubmit={handleForgotSubmit} className="space-y-5">
-                        <div>
-                          <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-2">
-                            YOUR REGISTERED EMAIL ADDRESS
-                          </label>
-                          <input 
-                            type="email"
-                            placeholder="ancestor@afrolineo.org"
-                            value={forgotEmail}
-                            onChange={(e) => setForgotEmail(e.target.value)}
-                            disabled={isLoading}
-                            className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-3 px-4 rounded text-xs text-white placeholder-gray-700 outline-none transition-colors"
-                            required
-                          />
-                          <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-                            We will send a temporary secure bypass authorization link to restore access. No central passwords saved on external servers.
-                          </p>
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className="w-full bg-[#E2A04F] hover:bg-[#E2A04F]/90 text-black py-3 rounded-sm font-sans font-black text-[10px] uppercase tracking-widest transition-all duration-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
-                        >
-                          {isLoading ? (
-                            <span className="flex items-center gap-1.5">
-                              <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-black border-t-transparent" />
-                              Transmitting Recovery Signal...
-                            </span>
-                          ) : (
-                            <>
-                              <span>Send Recovery Instructions</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-                      </form>
-                    ) : (
-                      <div className="p-5 bg-emerald-950/20 border border-emerald-800/40 rounded-sm text-xs text-gray-300 leading-relaxed font-light space-y-2">
-                        <span className="text-emerald-400 font-bold flex items-center gap-2 text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          Recovery Transmitted Successfully!
-                        </span>
-                        <p>
-                          We have dispatched your temporary credential bypass token to <span className="font-mono text-[#E2A04F] font-semibold">{forgotEmail}</span>.
-                        </p>
-                        <p className="text-gray-500 text-[11px]">
-                          (In this sandbox playground mode, you can toggle back and use any credentials key to bypass login immediately!)
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="pt-4 text-center border-t border-gray-800/40">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsForgotPassword(false);
-                          setIsForgotSubmitted(false);
-                          setForgotEmail('');
-                          setErrorMsg('');
-                          setSuccessMsg('');
-                        }}
-                        className="text-xs text-[#E2A04F] hover:underline transition-colors cursor-pointer font-bold font-sans"
-                      >
-                        ← Return to secure account login
-                      </button>
-                    </div>
-                  </div>
+                    <button type="submit" disabled={isLoading} className={PRIMARY_BUTTON_CLASS}>
+                      {isLoading ? <><Spinner /> Sending…</> : 'Send reset link'}
+                    </button>
+                  </form>
                 ) : (
-                  <>
-                    {/* Header label inside login modal */}
-                    <div className="mb-6 mt-2">
-                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#E2A04F]/10 text-[#E2A04F] border border-[#E2A04F]/20 mb-2">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <h3 className="text-xl font-serif font-black text-white">
-                        {isSignUp ? 'Generate Search Passport' : 'Access Sovereign Archives'}
-                      </h3>
-                      <p className="text-[9px] text-gray-400 tracking-wider uppercase font-sans mt-1">
-                        {isSignUp ? 'Establish credentials for testing' : 'Validate identity credentials'}
-                      </p>
+                  <div role="status" className="mt-6 p-4 rounded-2xl bg-forest-tint text-forest">
+                    <p className="font-semibold flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5" aria-hidden="true" /> Check your inbox
+                    </p>
+                    <p className="mt-1 text-[14px] text-ink-soft">
+                      If an account exists for <strong className="font-semibold">{forgotEmail}</strong>, a reset link is on its way.
+                    </p>
+                    <p className="mt-2 text-[13px] text-muted">Demo mode: no email is actually sent. Go back and sign in with any password.</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setIsForgotSubmitted(false);
+                    setForgotEmail('');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                  className="mt-6 text-[15px] font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
+                >
+                  ← Back to sign in
+                </button>
+              </div>
+            ) : (
+              /* ---------- Step 1: sign in / create account ---------- */
+              <div className="animate-fadeIn">
+                <span className="w-11 h-11 rounded-xl bg-ink flex items-center justify-center">
+                  <LineageMark className="w-6 h-6 text-[#E2A04F]" />
+                </span>
+                <h2 id="login-window-title" className="mt-4 font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
+                  {isSignUp ? 'Start your family archive' : 'Welcome back'}
+                </h2>
+                <p className="mt-1.5 text-[15px] text-muted">
+                  {isSignUp ? 'Free to start. Your tree stays in your browser.' : 'Sign in to continue your family tree.'}
+                </p>
+
+                <div className="mt-6 grid grid-cols-2 gap-2.5">
+                  {OAUTH_PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      id={`oauth-${p.id.toLowerCase()}`}
+                      type="button"
+                      onClick={() => handleOAuthClick(p.id)}
+                      disabled={isLoading}
+                      className="h-12 flex items-center justify-center gap-2.5 rounded-xl bg-white border border-line hover:border-ink-soft text-[15px] font-semibold cursor-pointer disabled:opacity-50 transition-colors"
+                    >
+                      {p.icon}
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="my-6 flex items-center gap-3 text-sm text-muted">
+                  <span className="flex-1 h-px bg-line" />
+                  or use email
+                  <span className="flex-1 h-px bg-line" />
+                </div>
+
+                <StatusMessage error={errorMsg} success={successMsg} />
+
+                <form onSubmit={handleEmailSubmit} className="space-y-4" noValidate>
+                  {isSignUp && (
+                    <div>
+                      <label htmlFor="login-field-fullname" className={LABEL_CLASS}>Your name</label>
+                      <input
+                        id="login-field-fullname"
+                        type="text"
+                        autoComplete="name"
+                        placeholder="e.g. Adefolarin Alao"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        disabled={isLoading}
+                        className={FIELD_CLASS}
+                      />
                     </div>
-
-                    {/* Error & Success status triggers inside popup window */}
-                    {errorMsg && (
-                      <div className="mb-4 p-3 bg-red-950/45 border border-red-800/40 text-red-200 text-xs rounded-sm flex items-center gap-2 animate-pulse">
-                        <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                        <span className="font-semibold">{errorMsg}</span>
-                      </div>
-                    )}
-
-                    {successMsg && (
-                      <div className="mb-4 p-3 bg-emerald-950/45 border border-emerald-800/40 text-emerald-200 text-xs rounded-sm flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="font-semibold">{successMsg}</span>
-                      </div>
-                    )}
-
-                    {/* Native Credentials Form */}
-                    <form onSubmit={handleEmailSubmit} className="space-y-4">
-                      
-                      {isSignUp && (
-                        <div>
-                          <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1">
-                            YOUR VISITOR REAL NAME
-                          </label>
-                          <input 
-                            id="login-field-fullname"
-                            type="text"
-                            placeholder="e.g. Adefolarin Alao"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            disabled={isLoading}
-                            className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded-sm text-xs text-white placeholder-gray-705 font-sans outline-none transition-colors"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans mb-1">
-                          VAULT EMAIL IDENTIFIER
-                        </label>
-                        <input 
-                          id="login-field-email"
-                          type="email"
-                          placeholder="ancestor@afrolineo.org"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          disabled={isLoading}
-                          className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded-sm text-xs text-white placeholder-gray-705 font-sans outline-none transition-colors"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="block text-[8px] uppercase tracking-[0.18em] text-gray-400 font-bold font-sans">
-                            VAULT PASSWORD KEY
-                          </label>
-                          {!isSignUp && (
-                            <button 
-                              type="button" 
-                              onClick={() => alert("Credentials bypass: Put any 5+ characters password to unlock the testing sandbox.")}
-                              className="text-[8px] uppercase tracking-wider text-[#E2A04F]/80 hover:text-[#E2A04F] cursor-pointer"
-                            >
-                              Bypass?
-                            </button>
-                          )}
-                        </div>
-                        <input 
-                          id="login-field-pass"
-                          type="password"
-                          placeholder="••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={isLoading}
-                          className="w-full bg-[#111110] border border-gray-800 focus:border-[#E2A04F] py-2.5 px-3 rounded-sm text-xs text-white placeholder-gray-750 font-sans outline-none transition-colors"
-                          required
-                        />
-                        {!isSignUp && (
-                          <div className="text-right mt-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsForgotPassword(true);
-                                setErrorMsg('');
-                                setSuccessMsg('');
-                              }}
-                              className="text-[10px] text-gray-400 hover:text-[#E2A04F] transition-colors cursor-pointer font-bold font-sans tracking-wide"
-                            >
-                              Forgot password?
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        id="login-submit-btn"
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-[#E2A04F] hover:bg-[#E2A04F]/90 text-black py-2.5 rounded-sm font-sans font-black text-[10px] uppercase tracking-widest transition-all duration-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
-                      >
-                        {isLoading && !activeProvider ? (
-                          <span className="flex items-center gap-1.55">
-                            <span className="animate-spin rounded-full h-3 w-3 border-2 border-black border-t-transparent" />
-                            Validating Credentials...
-                          </span>
-                        ) : (
-                          <>
-                            {isSignUp ? 'Verify Passport Details' : 'Validate Passport Key'}
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </>
-                        )}
-                      </button>
-                    </form>
-
-                    {/* Passport identity provider divider */}
-                    <div className="relative my-6 flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-805" />
-                      </div>
-                      <span className="relative z-10 bg-[#1a1918] px-3.5 text-[7px] text-gray-500 font-sans font-bold uppercase tracking-[0.2em]">
-                        OR SECURE DIRECT PASSPORT
-                      </span>
-                    </div>
-
-                    {/* Social logins with realistic service colors */}
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                      
-                      <button
-                        id="oauth-google"
-                        onClick={() => handleOAuthClick('Google')}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 bg-[#111110] hover:bg-[#1a1918] border border-gray-850 hover:border-[#4285F4]/40 p-2 rounded-sm text-left text-gray-300 hover:text-white transition-all cursor-pointer text-[11px] group"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg">
-                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.62-1.07-1.37-1.34-2.22z" />
-                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                        </svg>
-                        <span className="font-semibold truncate group-hover:text-white">Google</span>
-                      </button>
-
-                      <button
-                        id="oauth-x"
-                        onClick={() => handleOAuthClick('X')}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 bg-[#111110] hover:bg-[#1a1918] border border-gray-850 hover:border-white/30 p-2 rounded-sm text-left text-gray-300 hover:text-white transition-all cursor-pointer text-[11px] group"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0 fill-white opacity-85 group-hover:opacity-100" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                        </svg>
-                        <span className="font-semibold truncate group-hover:text-white">X / Twitter</span>
-                      </button>
-
-                      <button
-                        id="oauth-apple"
-                        onClick={() => handleOAuthClick('Apple')}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 bg-[#111110] hover:bg-[#1a1918] border border-gray-855 hover:border-white/30 p-2 rounded-sm text-left text-gray-300 hover:text-white transition-all cursor-pointer text-[11px] group"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0 fill-white opacity-85 group-hover:opacity-100" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.7-1.13 1.84-.99 2.94.12 1.12.9 1.1.9 1.1s.63-.53.92-2.43z" />
-                        </svg>
-                        <span className="font-semibold truncate group-hover:text-white">Apple ID</span>
-                      </button>
-
-                      <button
-                        id="oauth-facebook"
-                        onClick={() => handleOAuthClick('Facebook')}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 bg-[#111110] hover:bg-[#1a1918] border border-gray-855 hover:border-[#1877F2]/40 p-2 rounded-sm text-left text-gray-300 hover:text-white transition-all cursor-pointer text-[11px] group"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0 fill-[#1877F2]" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                        </svg>
-                        <span className="font-semibold truncate group-hover:text-white">Facebook</span>
-                      </button>
-
-                    </div>
-
-                    {/* Toggle form link inside login modal */}
-                    <div className="text-center pt-2 border-t border-gray-800/40">
-                      <p className="text-[11px] text-gray-400">
-                        {isSignUp ? 'Already mapped some lines?' : 'First time recording ancestry?'}
+                  )}
+                  <div>
+                    <label htmlFor="login-field-email" className={LABEL_CLASS}>Email</label>
+                    <input
+                      id="login-field-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-baseline">
+                      <label htmlFor="login-field-pass" className={LABEL_CLASS}>Password</label>
+                      {!isSignUp && (
                         <button
-                          id="login-toggle-signup"
                           type="button"
                           onClick={() => {
+                            setIsForgotPassword(true);
                             setErrorMsg('');
                             setSuccessMsg('');
-                            setIsSignUp(!isSignUp);
                           }}
-                          className="text-[#E2A04F] hover:underline font-bold ml-1 cursor-pointer font-sans"
+                          className="text-sm font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
                         >
-                          {isSignUp ? 'Log in here' : 'Register free passport'}
+                          Forgot password?
                         </button>
-                      </p>
+                      )}
                     </div>
-                  </>
-                )}
+                    <input
+                      id="login-field-pass"
+                      type="password"
+                      autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                      placeholder={isSignUp ? 'At least 5 characters' : ''}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+
+                  <button id="login-submit-btn" type="submit" disabled={isLoading} className={PRIMARY_BUTTON_CLASS}>
+                    {isLoading && !activeProvider ? (
+                      <><Spinner /> {isSignUp ? 'Creating account…' : 'Signing in…'}</>
+                    ) : (
+                      isSignUp ? 'Create account' : 'Sign in'
+                    )}
+                  </button>
+                  <p className="text-[13px] text-muted text-center">
+                    Demo mode: any email and a password of 5+ characters will work.
+                  </p>
+                </form>
+
+                <p className="mt-6 pt-5 border-t border-line text-center text-[15px] text-muted">
+                  {isSignUp ? 'Already have an account?' : 'New to Afrolineo?'}{' '}
+                  <button
+                    id="login-toggle-signup"
+                    type="button"
+                    onClick={() => {
+                      setErrorMsg('');
+                      setSuccessMsg('');
+                      setIsSignUp(!isSignUp);
+                    }}
+                    className="font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
+                  >
+                    {isSignUp ? 'Sign in' : 'Create an account'}
+                  </button>
+                </p>
               </div>
             )}
-
           </div>
         </div>
       )}
 
-      {/* INDIVIDUAL SECURE POPUP MODAL SIMULATION FOR OAUTH CODES */}
+      {/* Demo stand-in for a social sign-in pop-up */}
       {showOAuthPopup && (
-        <div id="oauth-popup-shadow" className="fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[60] animate-fadeIn select-none">
-          <div className="bg-[#1a1918] border border-[#E2A04F]/60 rounded-xl p-6 max-w-sm w-full shadow-2xl relative text-center">
-            
-            <div className="w-12 h-12 rounded-full bg-[#E2A04F]/10 border border-[#E2A04F]/30 flex items-center justify-center mx-auto mb-3">
-              <ShieldCheck className="w-6 h-6 text-[#E2A04F]" />
-            </div>
-
-            <h3 className="font-serif font-black text-white text-base">
-              Secure Credentials Handshake
-            </h3>
-            
-            <p className="text-[9px] text-[#E2A04F] uppercase tracking-widest mt-1 font-bold">
-              {activeProvider} Gateway Status
+        <div id="oauth-popup-shadow" className="fixed inset-0 bg-ink/60 flex items-center justify-center p-4 z-[60] animate-fadeIn">
+          <div role="dialog" aria-modal="true" aria-labelledby="oauth-title" className="bg-cream text-ink rounded-3xl p-7 max-w-sm w-full shadow-2xl text-center">
+            <span className="w-12 h-12 rounded-full bg-white border border-line flex items-center justify-center mx-auto">
+              {OAUTH_PROVIDERS.find((p) => p.id === activeProvider)?.icon ?? <ShieldCheck className="w-6 h-6" />}
+            </span>
+            <h2 id="oauth-title" className="mt-4 font-display font-medium text-2xl">Continue with {activeProvider}</h2>
+            <p className="mt-2 text-[15px] text-muted leading-relaxed">
+              This is a demo, so no {activeProvider} account is connected. Continue to try Afrolineo with a sample profile.
             </p>
-
-            <p className="text-xs text-gray-400 my-4 leading-relaxed font-light">
-              Afrolineo is initiating a secure passport validation with your <strong className="text-white">{activeProvider}</strong> credentials to unlock your ancestry mapping chamber.
-            </p>
-
-            <div className="bg-[#111110] p-3 text-left rounded-sm border border-gray-800/80 mb-5 font-mono text-[9px] text-emerald-400">
-              <span className="block text-gray-600 font-sans uppercase tracking-wider text-[7px] mb-1">Vault Authentication Key</span>
-              <span className="block">✔ Handshake verified.</span>
-              <span className="block">✔ Read authorization accepted.</span>
-            </div>
-
-            <div className="flex gap-3">
+            <div className="mt-6 flex gap-3">
               <button
                 id="oauth-cancel"
+                type="button"
                 onClick={() => {
                   setShowOAuthPopup(false);
                   setActiveProvider(null);
+                  setIsLoading(false);
                 }}
-                className="flex-1 py-2 px-3 border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white rounded-sm text-[9px] font-sans font-bold uppercase tracking-wider cursor-pointer"
+                className="flex-1 h-12 rounded-full border-[1.5px] border-[#CFC4B4] font-semibold hover:border-ink cursor-pointer"
               >
-                Cancel Loop
+                Cancel
               </button>
-              
               <button
                 id="oauth-confirm"
+                type="button"
                 onClick={confirmOAuthLogin}
-                className="flex-1 py-2 px-3 bg-[#E2A04F] hover:bg-[#E2A04F]/90 text-black rounded-sm text-[9px] font-sans font-bold uppercase tracking-wider cursor-pointer"
+                disabled={isLoading}
+                className="flex-1 h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                Accept & Verify
+                {isLoading ? <><Spinner /> One moment</> : 'Continue'}
               </button>
             </div>
           </div>
@@ -1187,7 +1127,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 <Network className="w-6 h-6 text-[#E2A04F]" />
                 <div>
                   <h3 className="font-sans font-bold text-lg uppercase tracking-wider text-white">Afrolineo Directory Sitemap</h3>
-                  <p className="text-[10px] text-gray-400 font-sans tracking-normal leading-normal">
+                  <p className="text-xs text-gray-400 font-sans tracking-normal leading-normal">
                     Interactive portal mapper offering direct preview access to lineage tools and cultural directories.
                   </p>
                 </div>
@@ -1226,7 +1166,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     <Globe className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">Core Navigation</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Requires credential verification to establish secure lineage nodes.
                   </p>
                   
@@ -1247,9 +1187,9 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         >
                           <div>
                             <span className="font-sans font-bold text-gray-800 block text-xs">{item.name}</span>
-                            <span className="text-[10px] text-gray-500 block mt-0.5">{item.desc}</span>
+                            <span className="text-xs text-gray-500 block mt-0.5">{item.desc}</span>
                           </div>
-                          <span className="text-[8px] uppercase font-mono bg-amber-50 text-amber-800 px-1 py-0.5 rounded border border-amber-100 group-hover:bg-[#E2A04F] group-hover:text-black shrink-0">
+                          <span className="text-xs uppercase font-mono bg-amber-50 text-amber-800 px-1 py-0.5 rounded border border-amber-100 group-hover:bg-[#E2A04F] group-hover:text-black shrink-0">
                             Unlock
                           </span>
                         </button>
@@ -1264,7 +1204,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     <Settings className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">Custodian Tools</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Actionable sub-modules for oral logs and secure offline backups.
                   </p>
 
@@ -1284,9 +1224,9 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         >
                           <div>
                             <span className="font-sans font-bold text-gray-800 block text-xs">{item.name}</span>
-                            <span className="text-[10px] text-gray-500 block mt-0.5">{item.desc}</span>
+                            <span className="text-xs text-gray-500 block mt-0.5">{item.desc}</span>
                           </div>
-                          <span className="text-[8px] uppercase font-mono bg-amber-50 text-amber-800 px-1 py-0.5 rounded border border-amber-100 group-hover:bg-[#E2A04F] group-hover:text-black shrink-0">
+                          <span className="text-xs uppercase font-mono bg-amber-50 text-amber-800 px-1 py-0.5 rounded border border-amber-100 group-hover:bg-[#E2A04F] group-hover:text-black shrink-0">
                             Unlock
                           </span>
                         </button>
@@ -1301,7 +1241,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     <Heart className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">About Directory</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Public directories and guidelines accessible without logging in.
                   </p>
 
@@ -1327,7 +1267,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         className="text-left text-xs p-2.5 bg-white border border-gray-200 hover:border-[#E2A04F] rounded-md text-gray-750 hover:text-[#2D2926] transition-colors flex justify-between items-center cursor-pointer"
                       >
                         <span className="font-medium">{item.label}</span>
-                        <span className="text-[8px] uppercase font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.badge}</span>
+                        <span className="text-xs uppercase font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.badge}</span>
                       </button>
                     ))}
                   </div>
@@ -1358,7 +1298,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
             {/* Top Header Banner */}
             <div className="bg-[#2D2926] text-[#F9F7F2] p-6 flex justify-between items-center border-b border-[#E2A04F]/20">
               <div className="text-left">
-                <span className="text-[8px] uppercase tracking-[0.25em] text-[#E2A04F] font-black block font-sans">
+                <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-black block font-sans">
                   Corporate & Cultural Directory
                 </span>
                 <h3 className="text-lg font-serif font-black uppercase text-white mt-1">
@@ -1379,7 +1319,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
               
               {/* Tab Navigation Menu */}
               <div className="md:col-span-1 bg-white border border-[#2D2926]/12 rounded-sm p-4 space-y-2 shadow-xs text-left">
-                <span className="text-[8.5px] uppercase font-sans tracking-[0.18em] text-gray-500 font-bold block mb-2 px-1">
+                <span className="text-xs uppercase font-sans tracking-[0.18em] text-gray-500 font-bold block mb-2 px-1">
                   Browse Sections
                 </span>
                 <nav className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 md:gap-2">
@@ -1418,7 +1358,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'dei' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">DEI Pledge</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">DEI Pledge</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Bridging the Ancestral Data Desert</h4>
                     </div>
 
@@ -1428,22 +1368,22 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                     <blockquote className="border-l-4 border-[#E2A04F] pl-4 italic text-gray-600 my-4 text-xs font-serif leading-relaxed">
                       "In many parts of Africa, a family tree is not drawn on a paper kept in a vault—it is recited in song during village festivals, or told under the shade of a sacred baobab."
-                      <cite className="block text-[9px] font-mono uppercase font-bold text-gray-500 mt-1.5 not-italic">— Mazi Chinedu, Igbo Historical Elder</cite>
+                      <cite className="block text-xs font-mono uppercase font-bold text-gray-500 mt-1.5 not-italic">— Mazi Chinedu, Igbo Historical Elder</cite>
                     </blockquote>
 
-                    <h5 className="font-sans font-bold text-[#2D2926] uppercase text-[10px] tracking-wider pt-1">Strategic Inclusion Imperatives:</h5>
+                    <h5 className="font-sans font-bold text-[#2D2926] uppercase text-xs tracking-wider pt-1">Strategic Inclusion Imperatives:</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="bg-[#FAF8F5] p-3 border border-gray-150 rounded">
-                        <strong className="block text-gray-800 text-[10px] font-bold">🌍 Epistemic Equity</strong>
-                        <p className="text-[10px] text-gray-600 leading-relaxed mt-1">Elevating verbal testimonies to the exact same database validity as written files.</p>
+                        <strong className="block text-gray-800 text-xs font-bold">🌍 Epistemic Equity</strong>
+                        <p className="text-xs text-gray-600 leading-relaxed mt-1">Elevating verbal testimonies to the exact same database validity as written files.</p>
                       </div>
                       <div className="bg-[#FAF8F5] p-3 border border-gray-150 rounded">
-                        <strong className="block text-gray-800 text-[10px] font-bold">🔊 Acoustic Justice</strong>
-                        <p className="text-[10px] text-gray-600 leading-relaxed mt-1">Refining voice encoders to respect the deep pitch and accents of native dialects.</p>
+                        <strong className="block text-gray-800 text-xs font-bold">🔊 Acoustic Justice</strong>
+                        <p className="text-xs text-gray-600 leading-relaxed mt-1">Refining voice encoders to respect the deep pitch and accents of native dialects.</p>
                       </div>
                       <div className="bg-[#FAF8F5] p-3 border border-gray-150 rounded">
-                        <strong className="block text-gray-800 text-[10px] font-bold">🗺️ Ancestral Geometry</strong>
-                        <p className="text-[10px] text-gray-600 leading-relaxed mt-1">Replacing coordinates with traditional compounds and tribal village borders.</p>
+                        <strong className="block text-gray-800 text-xs font-bold">🗺️ Ancestral Geometry</strong>
+                        <p className="text-xs text-gray-600 leading-relaxed mt-1">Replacing coordinates with traditional compounds and tribal village borders.</p>
                       </div>
                     </div>
                   </div>
@@ -1453,7 +1393,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'careers' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Work With Us</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Work With Us</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase font-sans">Build the Tools of Spoken Memory</h4>
                     </div>
 
@@ -1462,7 +1402,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </p>
 
                     <div className="space-y-3 pt-1">
-                      <h5 className="text-[9px] uppercase tracking-widest font-black text-gray-400 font-sans">Active Positions (2026)</h5>
+                      <h5 className="text-xs uppercase tracking-widest font-black text-gray-400 font-sans">Active Positions (2026)</h5>
                       {[
                         { title: 'Senior Heritage Ontologist', dept: 'Genealogical Systems', loc: 'Lagos, Nigeria' },
                         { title: 'Speech Signal & DSP Engineer', dept: 'Acoustic Division', loc: 'Accra, Ghana' },
@@ -1471,13 +1411,13 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         <div key={idx} className="border border-gray-150 rounded p-3 bg-[#FAF8F5] flex justify-between items-center">
                           <div>
                             <strong className="font-sans font-bold text-gray-800 block text-xs">{job.title}</strong>
-                            <span className="text-[9px] text-gray-500 font-mono block mt-0.5">{job.dept} • {job.loc}</span>
+                            <span className="text-xs text-gray-500 font-mono block mt-0.5">{job.dept} • {job.loc}</span>
                           </div>
                           <button 
                             onClick={() => {
                               alert("Application submitted! Thank you for backing Afrolineo's sovereign mission.");
                             }}
-                            className="px-3 py-1 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-black text-white text-[9px] uppercase tracking-wider font-bold rounded-xs transition-colors shrink-0"
+                            className="px-3 py-1 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-black text-white text-xs uppercase tracking-wider font-bold rounded-xs transition-colors shrink-0"
                           >
                             Apply
                           </button>
@@ -1491,7 +1431,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'newsroom' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">News & Dispatches</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">News & Dispatches</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Afrolineo Pressroom</h4>
                     </div>
 
@@ -1501,9 +1441,9 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         { date: 'May 04, 2026', title: 'Yoruba and Igbo Oral Accents Voice Synthesis Calibrator Completed', summary: 'Successfully completed calibration of the pre-colonial ward vocabulary to automatically suggest historical compounds.' }
                       ].map((item, idx) => (
                         <div key={idx} className="p-3 border border-gray-150 rounded bg-[#FAF8F5] space-y-1">
-                          <span className="text-[9px] text-[#E2A04F] font-mono block">{item.date}</span>
+                          <span className="text-xs text-[#E2A04F] font-mono block">{item.date}</span>
                           <strong className="font-sans font-bold text-gray-800 block text-xs">{item.title}</strong>
-                          <p className="text-gray-600 text-[11px] leading-relaxed mt-0.5">{item.summary}</p>
+                          <p className="text-gray-600 text-[12.5px] leading-relaxed mt-0.5">{item.summary}</p>
                         </div>
                       ))}
                     </div>
@@ -1514,7 +1454,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'security' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Vault Protection</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Vault Protection</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Zero-Knowledge Secure Handshakes</h4>
                     </div>
 
@@ -1524,7 +1464,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                     <div className="p-3.5 bg-emerald-50 border border-emerald-250 text-emerald-800 rounded space-y-2">
                       <strong className="block text-xs font-bold">✔ Browser-Hardened Sandboxing</strong>
-                      <p className="text-[11px] leading-relaxed">Lineage structures are written straight to standard IndexedDB inside your device. No cloud storage is provisioned without explicit local exports, keeping tracking vectors at exactly zero.</p>
+                      <p className="text-[12.5px] leading-relaxed">Lineage structures are written straight to standard IndexedDB inside your device. No cloud storage is provisioned without explicit local exports, keeping tracking vectors at exactly zero.</p>
                     </div>
                   </div>
                 )}
@@ -1533,14 +1473,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'privacy' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Sovereign Data Rights</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Sovereign Data Rights</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase font-sans">Privacy Enclave Declaration</h4>
                     </div>
 
                     <p className="text-gray-700 leading-relaxed font-light">
                       We operate on a zero-tracking framework. You are the sole custodian of your heritage. Your files are not indexed, scanned, or used to train commercial AI speech generators.
                     </p>
-                    <p className="text-gray-500 font-mono text-[10px]">
+                    <p className="text-gray-500 font-mono text-xs">
                       Latest Revision: June 2026 • Local Sandbox Compliant
                     </p>
                   </div>
@@ -1550,7 +1490,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'guidelines' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Custodian Rules</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Custodian Rules</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Lineage Mapping Code of Ethos</h4>
                     </div>
 
@@ -1572,17 +1512,17 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'terms' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Legal Autonomy</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Legal Autonomy</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Sovereign Ancestral Memory Pact</h4>
                     </div>
 
                     <p className="text-gray-700 leading-relaxed font-light">
-                      Unlike generic ancestry corporations that claim global rights to reproduce, process, or sell your family’s DNA sequences and genealogical trees, Afrolineo operates on a **strictly decentralized, zero-tracking, client-controlled framework**.
+                      Unlike generic ancestry corporations that claim global rights to reproduce, process, or sell your family’s DNA sequences and genealogical trees, Afrolineo operates on a <strong>strictly decentralized, zero-tracking, client-controlled framework</strong>.
                     </p>
 
                     <div className="bg-[#FAF8F5] p-4 border border-gray-150 rounded space-y-2.5">
-                      <h5 className="font-sans font-bold text-gray-800 text-[10.5px] uppercase tracking-wide">Standard Rules of Ownership:</h5>
-                      <div className="space-y-2 text-[10.5px] text-gray-600">
+                      <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Standard Rules of Ownership:</h5>
+                      <div className="space-y-2 text-xs text-gray-600">
                         <p><strong>1. Zero Data Lock-In:</strong> All family mappings, audio sound files, and geographical notes remain in your device’s local memory sandbox. You can download and delete them instantly.</p>
                         <p><strong>2. Commercial Ban:</strong> Afrolineo is legally barred from indexing your family’s oral archives for commercial advertising, public searches, or corporate translation API training.</p>
                         <p><strong>3. Absolute Custodianship:</strong> You represent that you have obtained verbal or physical consent from elders prior to registering their voice files inside this sandbox.</p>
@@ -1595,7 +1535,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         <ShieldCheck className="w-5 h-5 text-[#E2A04F]" />
                         <span className="font-sans font-bold text-xs text-[#2D2926] uppercase">Affirm the Ancestral Stewardship Pact</span>
                       </div>
-                      <p className="text-[10px] text-gray-500 leading-normal">
+                      <p className="text-xs text-gray-500 leading-normal">
                         By checking this box, you formally pledge to map lineages with accuracy, seek consent from elders, and keep these records as a sacred family inheritance.
                       </p>
 
@@ -1603,19 +1543,19 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         <button
                           type="button"
                           onClick={() => setPactSignedLanding(true)}
-                          className="w-full sm:w-auto px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                          className="w-full sm:w-auto px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                         >
                           Sign & Affirm Pact
                         </button>
                       ) : (
-                        <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 p-3 rounded flex items-center justify-between text-[11px] font-bold animate-scaleIn">
+                        <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 p-3 rounded flex items-center justify-between text-[12.5px] font-bold animate-scaleIn">
                           <span className="flex items-center gap-1">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> Pact Signed & Sealed on Your Browser
                           </span>
                           <button
                             type="button"
                             onClick={() => setPactSignedLanding(false)}
-                            className="text-[9px] text-[#2D2926] hover:underline font-mono uppercase"
+                            className="text-xs text-[#2D2926] hover:underline font-mono uppercase"
                           >
                             Revoke
                           </button>
@@ -1629,7 +1569,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'social-impact' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Cultural Mission</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Cultural Mission</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Reversing the Digital Erasure of Oral Lineages</h4>
                     </div>
 
@@ -1641,22 +1581,22 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     <div className="grid grid-cols-3 gap-2.5 py-1 text-center">
                       <div className="bg-[#FAF8F5] border border-gray-150 p-2.5 rounded">
                         <strong className="block text-[#E2A04F] text-sm font-sans font-black">14,200+</strong>
-                        <span className="text-[9px] text-gray-500 font-mono">Elder Logs Saved</span>
+                        <span className="text-xs text-gray-500 font-mono">Elder Logs Saved</span>
                       </div>
                       <div className="bg-[#FAF8F5] border border-gray-150 p-2.5 rounded">
                         <strong className="block text-[#E2A04F] text-sm font-sans font-black">350+</strong>
-                        <span className="text-[9px] text-gray-500 font-mono">Compounds Mapped</span>
+                        <span className="text-xs text-gray-500 font-mono">Compounds Mapped</span>
                       </div>
                       <div className="bg-[#FAF8F5] border border-gray-150 p-2.5 rounded">
                         <strong className="block text-[#E2A04F] text-sm font-sans font-black">1.2M+</strong>
-                        <span className="text-[9px] text-gray-500 font-mono font-sans">Words Transcribed</span>
+                        <span className="text-xs text-gray-500 font-mono font-sans">Words Transcribed</span>
                       </div>
                     </div>
 
                     {/* Interactive Sponsor Form */}
                     <div className="border border-gray-200 p-4 rounded bg-white space-y-3">
                       <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Sponsor a Village Elder Compound</h5>
-                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                      <p className="text-xs text-gray-500 leading-relaxed">
                         We deploy low-cost physical mesh-WiFi server nodes to remote African villages. Nominate an elder compound in your hometown to receive sponsored equipment.
                       </p>
 
@@ -1689,7 +1629,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           </div>
                           <button
                             type="submit"
-                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Submit Nomination Request
                           </button>
@@ -1699,7 +1639,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           <p className="font-bold text-xs flex items-center justify-center gap-1">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> Nomination Staged Successfully!
                           </p>
-                          <p className="text-[10.5px] text-emerald-700 leading-relaxed">
+                          <p className="text-xs text-emerald-700 leading-relaxed">
                             Thank you! Your nomination for <strong>{sponsorshipCompoundLanding}</strong> located in <strong>{sponsorshipLGALanding}</strong> has been logged in your client buffer and staged for review by our regional field coordinators.
                           </p>
                           <button
@@ -1709,7 +1649,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               setSponsorshipCompoundLanding('');
                               setSponsorshipLGALanding('');
                             }}
-                            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[9px] uppercase font-bold rounded"
+                            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-xs uppercase font-bold rounded"
                           >
                             Nominate another compound
                           </button>
@@ -1723,7 +1663,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'community-impact' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Local Outreach</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Local Outreach</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase">Afrolineo in Your Community</h4>
                     </div>
 
@@ -1734,14 +1674,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     <div className="space-y-3 pt-1">
                       <div className="border border-gray-150 p-3 rounded bg-[#FAF8F5]">
                         <strong className="block text-gray-800 text-xs">🏡 Community Archivist Toolkits</strong>
-                        <p className="text-gray-600 text-[11px] leading-relaxed mt-1">
+                        <p className="text-gray-600 text-[12.5px] leading-relaxed mt-1">
                           We provide physical recording booklets, high-sensitivity microphone adapters, and offline lineage maps for family compound unions.
                         </p>
                       </div>
 
                       <div className="border border-gray-150 p-3 rounded bg-[#FAF8F5]">
                         <strong className="block text-gray-800 text-xs">🤝 Tribal Townhall & Dialect Gatherings</strong>
-                        <p className="text-gray-600 text-[11px] leading-relaxed mt-1">
+                        <p className="text-gray-600 text-[12.5px] leading-relaxed mt-1">
                           We partner with local cultural unions (e.g. Egbe Omo Oduduwa, Igbo Progressive Association) to host lineage validation workshops.
                         </p>
                       </div>
@@ -1750,7 +1690,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     {/* Interactive Workshop Booker */}
                     <div className="border border-amber-200 bg-amber-50/20 p-4 rounded space-y-3">
                       <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Request a Local Workshop Prep Kit</h5>
-                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                      <p className="text-xs text-gray-500 leading-relaxed">
                         Planning an upcoming family reunion or compound union? Book a virtual training session and receive a physical preparation pack.
                       </p>
 
@@ -1771,7 +1711,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               }
                               setWorkshopBookedLanding(true);
                             }}
-                            className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer shrink-0"
+                            className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer shrink-0"
                           >
                             Book Workshop Date
                           </button>
@@ -1781,7 +1721,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           <p className="font-bold text-xs flex items-center justify-center sm:justify-start gap-1">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> Workshop Date Registered!
                           </p>
-                          <p className="text-[10.5px] text-emerald-700 leading-relaxed">
+                          <p className="text-xs text-emerald-700 leading-relaxed">
                             Excellent! We have flagged your family gathering date (<strong>{workshopDateLanding}</strong>). A physical preparation pack containing memory logs and microphone guidelines is queued to be dispatched.
                           </p>
                           <button
@@ -1790,7 +1730,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               setWorkshopBookedLanding(false);
                               setWorkshopDateLanding('');
                             }}
-                            className="text-[9px] text-[#2D2926] hover:underline uppercase font-bold font-mono"
+                            className="text-xs text-[#2D2926] hover:underline uppercase font-bold font-mono"
                           >
                             Cancel or Reschedule
                           </button>
@@ -1804,7 +1744,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 {activeAboutTabLanding === 'support' && (
                   <div className="space-y-4 animate-scaleIn text-xs">
                     <div className="border-b border-gray-100 pb-3">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Assistance Portal</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Assistance Portal</span>
                       <h4 className="font-serif font-black text-base text-[#2D2926] uppercase font-sans">Custodian Help & Support Desk</h4>
                     </div>
 
@@ -1814,7 +1754,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                     {/* Interactive FAQ accordions */}
                     <div className="space-y-2">
-                      <h5 className="font-sans font-bold text-gray-800 text-[10px] uppercase tracking-wider">Frequently Answered Protocols:</h5>
+                      <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wider">Frequently Answered Protocols:</h5>
                       
                       {[
                         { q: 'Will my files vanish if I clear my browser cookies?', a: 'Yes. Since Afrolineo operates in a zero-knowledge local sandbox, clearing your browser\'s cache/history will wipe local database memory. ALWAYS download a sovereign backup (.afrolineo archive) after completing updates.' },
@@ -1825,13 +1765,13 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           <button
                             type="button"
                             onClick={() => setFaqOpenLanding(faqOpenLanding === idx ? null : idx)}
-                            className="w-full text-left p-2.5 bg-[#FAF8F5] hover:bg-gray-50 flex justify-between items-center text-[10.5px] font-bold text-gray-800 cursor-pointer"
+                            className="w-full text-left p-2.5 bg-[#FAF8F5] hover:bg-gray-50 flex justify-between items-center text-xs font-bold text-gray-800 cursor-pointer"
                           >
                             <span>{faq.q}</span>
                             <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${faqOpenLanding === idx ? 'rotate-180' : ''}`} />
                           </button>
                           {faqOpenLanding === idx && (
-                            <div className="p-3 bg-white text-[10.5px] text-gray-600 border-t border-gray-100 leading-relaxed animate-slideDown font-serif">
+                            <div className="p-3 bg-white text-xs text-gray-600 border-t border-gray-100 leading-relaxed animate-slideDown font-serif">
                               {faq.a}
                             </div>
                           )}
@@ -1842,7 +1782,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     {/* Support ticket submission form */}
                     <div className="border border-gray-200 p-4 rounded bg-white space-y-3 mt-1">
                       <h5 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Log a Support & Diagnostic Ticket</h5>
-                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                      <p className="text-xs text-gray-500 leading-relaxed">
                         Need technical help? Submit a local ticket to draft a diagnostic package.
                       </p>
 
@@ -1885,7 +1825,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           />
                           <button
                             type="submit"
-                            className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Generate Help Desk Ticket
                           </button>
@@ -1895,7 +1835,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           <p className="font-bold text-xs flex items-center justify-center gap-1">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> Support Ticket Generated!
                           </p>
-                          <p className="text-[10.5px] text-emerald-700 leading-relaxed">
+                          <p className="text-xs text-emerald-700 leading-relaxed">
                             Your help desk ticket <strong>#AFR-2026-{(Math.floor(Math.random() * 8999) + 1000)}</strong> has been registered in your client browser cookie state. An encrypted diagnostic log has been staged.
                           </p>
                           <button
@@ -1905,7 +1845,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               setSupportMessageLanding('');
                               setSupportEmailLanding('');
                             }}
-                            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[9px] uppercase font-bold rounded"
+                            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-xs uppercase font-bold rounded"
                           >
                             Submit another support ticket
                           </button>
@@ -1920,10 +1860,10 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926]">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Knowledge Hub</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Knowledge Hub</span>
                         <h4 className="font-serif font-black text-lg text-[#2D2926] uppercase">Oral Genealogy & Preservation Articles</h4>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">Curated by Academic Councils</span>
+                      <span className="text-xs text-gray-500 font-mono">Curated by Academic Councils</span>
                     </div>
 
                     {selectedArticleIdLanding ? (
@@ -1937,15 +1877,15 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                             <button
                               type="button"
                               onClick={() => setSelectedArticleIdLanding(null)}
-                              className="text-[#E2A04F] hover:underline font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer"
+                              className="text-[#E2A04F] hover:underline font-bold text-xs uppercase flex items-center gap-1 cursor-pointer"
                             >
                               ← Return to Articles Directory
                             </button>
                             <div className="bg-[#FAF8F5] border border-gray-200 p-6 rounded-md space-y-4 text-left">
                               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
-                                <span className="bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-[9px] font-bold uppercase tracking-wider">{article.category}</span>
+                                <span className="bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-xs font-bold uppercase tracking-wider">{article.category}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-gray-400 font-mono">{article.date} • {article.readTime}</span>
+                                  <span className="text-xs text-gray-400 font-mono">{article.date} • {article.readTime}</span>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1963,7 +1903,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                 </div>
                               </div>
                               <h3 className="font-serif font-black text-xl text-[#2D2926] leading-snug">{article.title}</h3>
-                              <p className="text-[10.5px] text-gray-500 font-serif italic border-l-2 border-[#E2A04F] pl-3 text-left">Written by {article.author}</p>
+                              <p className="text-xs text-gray-500 font-serif italic border-l-2 border-[#E2A04F] pl-3 text-left">Written by {article.author}</p>
                               
                               <div className="text-gray-700 leading-relaxed font-serif text-xs space-y-3.5 pt-2 whitespace-pre-line text-left">
                                 {article.content}
@@ -2009,7 +1949,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                             <button
                               type="button"
                               onClick={() => setSavedArticlesLanding([])}
-                              className="text-[9px] text-[#2D2926] underline uppercase font-bold hover:text-[#E2A04F]"
+                              className="text-xs text-[#2D2926] underline uppercase font-bold hover:text-[#E2A04F]"
                             >
                               Clear List
                             </button>
@@ -2030,7 +1970,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               <div key={art.id} className="border border-gray-200 hover:border-gray-300 p-4 rounded-md bg-[#FAF8F5] transition-all flex flex-col justify-between space-y-3 text-left">
                                 <div className="space-y-1.5">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[9px] uppercase font-mono tracking-widest text-[#E2A04F] font-bold">{art.category}</span>
+                                    <span className="text-xs uppercase font-mono tracking-widest text-[#E2A04F] font-bold">{art.category}</span>
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2047,14 +1987,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                     </button>
                                   </div>
                                   <h5 className="font-serif font-black text-sm text-gray-800 leading-snug">{art.title}</h5>
-                                  <p className="text-[11px] text-gray-600 leading-relaxed font-light">{art.excerpt}</p>
+                                  <p className="text-[12.5px] text-gray-600 leading-relaxed font-light">{art.excerpt}</p>
                                 </div>
                                 <div className="flex items-center justify-between pt-1 border-t border-gray-200/50">
-                                  <span className="text-[10px] text-gray-500 font-mono italic">By {art.author} • {art.readTime}</span>
+                                  <span className="text-xs text-gray-500 font-mono italic">By {art.author} • {art.readTime}</span>
                                   <button
                                     type="button"
                                     onClick={() => setSelectedArticleIdLanding(art.id)}
-                                    className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] text-white hover:text-[#2D2926] text-[9px] uppercase font-bold rounded transition-colors cursor-pointer"
+                                    className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] text-white hover:text-[#2D2926] text-xs uppercase font-bold rounded transition-colors cursor-pointer"
                                   >
                                     Read Full Essay →
                                   </button>
@@ -2073,10 +2013,10 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926]">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Preservation Shop</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Preservation Shop</span>
                         <h4 className="font-serif font-black text-lg text-[#2D2926] uppercase">Custom Family Heritage Artifacts</h4>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">100% of proceeds fund offline village hardware</span>
+                      <span className="text-xs text-gray-500 font-mono">100% of proceeds fund offline village hardware</span>
                     </div>
 
                     {selectedGiftIdLanding ? (
@@ -2094,7 +2034,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                 setSelectedGiftIdLanding(null);
                                 setGiftCustomizedLanding(false);
                               }}
-                              className="text-[#E2A04F] hover:underline font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer"
+                              className="text-[#E2A04F] hover:underline font-bold text-xs uppercase flex items-center gap-1 cursor-pointer"
                             >
                               ← Back to Heritage Shop Catalog
                             </button>
@@ -2106,7 +2046,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                 <div className="absolute inset-2 border border-[#E2A04F]/20 pointer-events-none rounded"></div>
                                 <div className="absolute inset-3 border border-[#E2A04F]/5 pointer-events-none rounded"></div>
                                 
-                                <span className="text-[8px] uppercase tracking-[0.25em] text-[#E2A04F] font-black font-sans">
+                                <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-black font-sans">
                                   ARCHIVAL DEMO SPECIFICATION
                                 </span>
 
@@ -2116,7 +2056,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                       <Mic className="w-6 h-6 text-[#E2A04F]" />
                                     </div>
                                     <h5 className="font-serif font-bold text-sm tracking-wide text-white">HERITAGE AUDIO CAPSULE</h5>
-                                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Laser Engraved:</p>
+                                    <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">Laser Engraved:</p>
                                     <div className="bg-[#1a1918] py-2 px-4 rounded border border-[#E2A04F]/40 inline-block font-serif font-black text-amber-100 text-xs tracking-wider italic">
                                       "{famName} Archives"
                                     </div>
@@ -2126,11 +2066,11 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                 {gift.id === 'gift-2' && (
                                   <div className="space-y-3">
                                     <div className="w-16 h-12 bg-transparent border-2 border-dashed border-[#E2A04F]/40 flex items-center justify-center mx-auto rounded">
-                                      <span className="text-[8px] text-gray-400 font-mono">5-Gen Blueprint</span>
+                                      <span className="text-xs text-gray-400 font-mono">5-Gen Blueprint</span>
                                     </div>
                                     <h5 className="font-serif font-black text-sm text-[#E2A04F] uppercase tracking-wider">{famName} Historical Tree</h5>
-                                    <p className="text-[10px] text-gray-300 font-sans leading-relaxed">Archival Canvas Specimen</p>
-                                    <div className="bg-[#1a1918]/60 py-1.5 px-3 rounded text-[9px] font-mono text-[#E2A04F]">
+                                    <p className="text-xs text-gray-300 font-sans leading-relaxed">Archival Canvas Specimen</p>
+                                    <div className="bg-[#1a1918]/60 py-1.5 px-3 rounded text-xs font-mono text-[#E2A04F]">
                                       TERRITORY: {regName.toUpperCase()}
                                     </div>
                                   </div>
@@ -2142,8 +2082,8 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                       📜
                                     </div>
                                     <h5 className="font-serif font-bold text-sm text-white">THE CUSTODIAN JOURNAL</h5>
-                                    <p className="text-[9px] text-gray-400 font-serif italic">Embossed in Gold Leaf Leather:</p>
-                                    <div className="bg-amber-950 py-1.5 px-3 rounded border border-amber-500/40 font-sans font-bold text-amber-300 text-[10px] uppercase">
+                                    <p className="text-xs text-gray-400 font-serif italic">Embossed in Gold Leaf Leather:</p>
+                                    <div className="bg-amber-950 py-1.5 px-3 rounded border border-amber-500/40 font-sans font-bold text-amber-300 text-xs uppercase">
                                       {famName} COVENANT
                                     </div>
                                   </div>
@@ -2155,28 +2095,28 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                       <Network className="w-6 h-6" />
                                     </div>
                                     <h5 className="font-serif font-bold text-sm text-white">VILLAGE SERVER HUB</h5>
-                                    <p className="text-[9px] text-gray-400 font-mono">STAGED HUB LOCATION:</p>
-                                    <div className="bg-emerald-950/80 py-1.5 px-3 rounded border border-emerald-500/40 font-mono font-bold text-emerald-300 text-[9px] uppercase">
+                                    <p className="text-xs text-gray-400 font-mono">STAGED HUB LOCATION:</p>
+                                    <div className="bg-emerald-950/80 py-1.5 px-3 rounded border border-emerald-500/40 font-mono font-bold text-emerald-300 text-xs uppercase">
                                       {famName} • {regName.toUpperCase()}
                                     </div>
                                   </div>
                                 )}
 
-                                <div className="text-[9px] font-mono text-gray-500 pt-2">
+                                <div className="text-xs font-mono text-gray-500 pt-2">
                                   Interactive Design Preview
                                 </div>
                               </div>
 
                               {/* Right Column: Customizer inputs */}
                               <div className="space-y-4 border border-gray-200 p-5 rounded-md bg-white">
-                                <span className="bg-amber-100 text-[#2D2926] px-2 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider">{gift.badge} Customizer</span>
+                                <span className="bg-amber-100 text-[#2D2926] px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">{gift.badge} Customizer</span>
                                 <h3 className="font-serif font-black text-base text-[#2D2926]">{gift.name}</h3>
-                                <p className="text-[11px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
+                                <p className="text-[12.5px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
                                 <span className="block text-[#E2A04F] text-base font-sans font-black">${gift.price.toFixed(2)}</span>
 
                                 <div className="space-y-3 pt-2">
                                   <div>
-                                    <label className="block text-[10px] uppercase font-sans font-bold text-gray-600 mb-1">
+                                    <label className="block text-xs uppercase font-sans font-bold text-gray-600 mb-1">
                                       Embossed Custom Family Name
                                     </label>
                                     <input
@@ -2193,7 +2133,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                                   {(gift.id === 'gift-2' || gift.id === 'gift-4') && (
                                     <div>
-                                      <label className="block text-[10px] uppercase font-sans font-bold text-gray-600 mb-1">
+                                      <label className="block text-xs uppercase font-sans font-bold text-gray-600 mb-1">
                                         Regional Location Label
                                       </label>
                                       <input
@@ -2229,7 +2169,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                       setCustomRegionLanding('');
                                       setGiftCustomizedLanding(false);
                                     }}
-                                    className="flex-1 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-[10px] font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer text-center"
+                                    className="flex-1 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer text-center"
                                   >
                                     Stage Custom Dispatch
                                   </button>
@@ -2241,7 +2181,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                       setCustomRegionLanding('');
                                       setGiftCustomizedLanding(false);
                                     }}
-                                    className="px-4 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 text-[10px] uppercase font-bold tracking-wider rounded transition-all cursor-pointer"
+                                    className="px-4 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs uppercase font-bold tracking-wider rounded transition-all cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -2268,7 +2208,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                   referrerPolicy="no-referrer"
                                   className="w-full h-full object-cover"
                                 />
-                                <span className="absolute top-3 left-3 bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider">
+                                <span className="absolute top-3 left-3 bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-xs font-bold uppercase tracking-wider">
                                   {gift.badge}
                                 </span>
                               </div>
@@ -2279,7 +2219,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                     <span className="text-[#E2A04F] text-xs font-sans font-black">${gift.price.toFixed(2)}</span>
                                   </div>
                                   <h5 className="font-serif font-black text-sm text-gray-800 leading-snug">{gift.name}</h5>
-                                  <p className="text-[10.5px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
+                                  <p className="text-xs text-gray-500 leading-relaxed font-light">{gift.description}</p>
                                 </div>
                                 <button
                                   type="button"
@@ -2288,7 +2228,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                     setCustomFamilyNameLanding('');
                                     setCustomRegionLanding('');
                                   }}
-                                  className="w-full py-2 bg-[#FAF8F5] hover:bg-[#2D2926] hover:text-white border border-[#2D2926]/30 text-[#2D2926] text-[10px] font-sans font-bold uppercase tracking-wider rounded transition-all cursor-pointer"
+                                  className="w-full py-2 bg-[#FAF8F5] hover:bg-[#2D2926] hover:text-white border border-[#2D2926]/30 text-[#2D2926] text-xs font-sans font-bold uppercase tracking-wider rounded transition-all cursor-pointer"
                                 >
                                   Configure & Preview Artifact →
                                 </button>
@@ -2303,7 +2243,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                             <h5 className="font-sans font-bold text-xs uppercase text-[#2D2926] flex items-center gap-2">
                               🎁 Your Staged Dispatch Manifest ({stagedGiftsLanding.length})
                             </h5>
-                            <p className="text-[10px] text-gray-500">
+                            <p className="text-xs text-gray-500">
                               These customized items are prepared in your temporary client session buffer. To place a real order or apply village sponsorship credit vouchers, proceed to the secure gateway setup.
                             </p>
                             <div className="space-y-2.5">
@@ -2311,14 +2251,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                 <div key={item.id} className="bg-white border border-gray-150 p-3 rounded flex items-center justify-between text-xs font-sans">
                                   <div>
                                     <p className="font-bold text-gray-800">{item.originalName}</p>
-                                    <p className="text-[10px] text-[#E2A04F] font-serif italic">Custom Title: "{item.customName}" {item.customRegion ? `• Region: ${item.customRegion}` : ''}</p>
+                                    <p className="text-xs text-[#E2A04F] font-serif italic">Custom Title: "{item.customName}" {item.customRegion ? `• Region: ${item.customRegion}` : ''}</p>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <strong className="text-gray-800 font-black">${item.price.toFixed(2)}</strong>
                                     <button
                                       type="button"
                                       onClick={() => setStagedGiftsLanding(stagedGiftsLanding.filter(g => g.id !== item.id))}
-                                      className="text-red-600 hover:underline text-[9px] uppercase font-mono"
+                                      className="text-red-600 hover:underline text-xs uppercase font-mono"
                                     >
                                       Remove
                                     </button>
@@ -2344,10 +2284,10 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926]">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Impact Testimonials</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Impact Testimonials</span>
                         <h4 className="font-serif font-black text-lg text-[#2D2926] uppercase">Custodian Success Chronicles</h4>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">Real Diaspora Breakthroughs</span>
+                      <span className="text-xs text-gray-500 font-mono">Real Diaspora Breakthroughs</span>
                     </div>
 
                     <p className="text-gray-750 leading-relaxed font-light text-xs text-left">
@@ -2361,7 +2301,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           <button
                             key={reg}
                             onClick={() => setStoryRegionFilterLanding(reg)}
-                            className={`px-3 py-1.5 rounded text-[9.5px] uppercase font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded text-xs uppercase font-bold transition-all cursor-pointer ${
                               storyRegionFilterLanding === reg ? 'bg-[#2D2926] text-[#E2A04F]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                           >
@@ -2381,17 +2321,17 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               <div key={story.id} className="border border-gray-200 rounded-lg p-5 bg-[#FAF8F5] text-left space-y-3.5 relative">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2.5">
                                   <div>
-                                    <span className="text-[9px] uppercase font-mono bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">{story.ethnic} ({story.region})</span>
+                                    <span className="text-xs uppercase font-mono bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">{story.ethnic} ({story.region})</span>
                                     <h5 className="font-serif font-black text-sm text-[#2D2926] mt-1">{story.name}</h5>
                                   </div>
-                                  <span className="text-[10px] font-mono font-bold text-[#E2A04F]">{story.yearsTrace}</span>
+                                  <span className="text-xs font-mono font-bold text-[#E2A04F]">{story.yearsTrace}</span>
                                 </div>
 
-                                <p className="text-[11px] text-gray-700 font-serif font-bold italic">"{story.summary}"</p>
-                                <p className="text-[11px] text-gray-600 font-light leading-relaxed font-serif whitespace-pre-line">{story.details}</p>
+                                <p className="text-[12.5px] text-gray-700 font-serif font-bold italic">"{story.summary}"</p>
+                                <p className="text-[12.5px] text-gray-600 font-light leading-relaxed font-serif whitespace-pre-line">{story.details}</p>
 
                                 <div className="bg-white border border-gray-150 p-3 rounded flex flex-col sm:flex-row items-center justify-between gap-3">
-                                  <span className="text-[10.5px] text-gray-500 font-sans">Oral Scribe: <strong>{story.speaker || 'Anonymous'}</strong></span>
+                                  <span className="text-xs text-gray-500 font-sans">Oral Scribe: <strong>{story.speaker || 'Anonymous'}</strong></span>
                                   
                                   {/* Simulated Interactive Audio tape playing with visual wave bar pulsing */}
                                   <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -2423,7 +2363,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                                           }, 20000);
                                         }
                                       }}
-                                      className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-[#2D2926] text-white text-[9px] uppercase font-bold tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer font-sans"
+                                      className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-[#2D2926] text-white text-xs uppercase font-bold tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer font-sans"
                                     >
                                       {isPlaying ? <Pause className="w-3 h-3 inline" /> : <Play className="w-3 h-3 inline font-bold" />}
                                       {isPlaying ? 'Pause tape' : `Hear Oral clip (${story.audioDuration || 'Demo'})`}
@@ -2438,7 +2378,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       {/* Submission form for user stories */}
                       <div className="border border-gray-250 p-5 rounded bg-white space-y-4 text-left">
                         <h4 className="font-sans font-bold text-[#2D2926] text-xs uppercase tracking-wide">Publish Your Family Breakthrough Story</h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-500 leading-relaxed">
                           Did you trace a long-lost ancestor, record a poignant oral audio capsule, or find your village ancestral compound? Tell other custodians what you accomplished!
                         </p>
                         <form
@@ -2496,7 +2436,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           />
                           <button
                             type="submit"
-                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Submit Breakthrough Story
                           </button>
