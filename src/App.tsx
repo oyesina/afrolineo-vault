@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Profile, OralHistory, ProfileRole, LinkedRelative, LoginSession } from './types';
-import FamilyTree from './components/FamilyTree';
+import FamilyTree, { RELATION_PHRASE, ROLE_INFO, SIDE_STYLES, initials } from './components/FamilyTree';
 import OriginsProfileForm from './components/OriginsProfileForm';
 import RecordingStudio from './components/RecordingStudio';
+import LineageMark from './components/LineageMark';
 import DiscoveryHub from './components/DiscoveryHub';
 import UserLoginGate from './components/UserLoginGate';
 import CommunityVault from './components/CommunityVault';
@@ -16,8 +17,8 @@ import {
   HelpCircle, Trash2, ArrowRight, UserPlus, FolderHeart, Plus, 
   X, Check, Settings, MessageSquare, Flame, Smile, LogOut, Search,
   ChevronLeft, ChevronRight, Copy, FileText, Smartphone, Laptop, Tablet, MapPin, TrendingUp, UserCheck, Network, Briefcase, Newspaper, Shield,
-  ChevronDown, BookOpen, Gift, Play, Pause, Bookmark
- } from 'lucide-react';
+  ChevronDown, BookOpen, Gift, Play, Pause, Bookmark, Pencil
+} from 'lucide-react';
 
 import { ARTICLES, GIFTS, STORIES } from './data/exploreData';
 
@@ -146,6 +147,16 @@ const DEFAULT_RECORDINGS: OralHistory[] = [
   }
 ];
 
+type AppScreen = 'tree' | 'discovery' | 'community' | 'dash' | 'about';
+
+const APP_NAV: { id: string; screen: AppScreen; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }> }[] = [
+  { id: 'sidebar-nav-tree-btn', screen: 'tree', label: 'Family tree', shortLabel: 'Tree', icon: LineageMark },
+  { id: 'sidebar-nav-discovery-btn', screen: 'discovery', label: 'Discover', shortLabel: 'Discover', icon: Globe },
+  { id: 'sidebar-nav-community-btn', screen: 'community', label: 'Relatives', shortLabel: 'Relatives', icon: Users },
+  { id: 'sidebar-nav-dash-btn', screen: 'dash', label: 'Founder metrics', shortLabel: 'Metrics', icon: Flame },
+  { id: 'sidebar-nav-about-btn', screen: 'about', label: 'About', shortLabel: 'About', icon: HelpCircle },
+];
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ 
     email: string; 
@@ -258,6 +269,30 @@ export default function App() {
   const [faqOpenAuth, setFaqOpenAuth] = useState<number | null>(null);
 
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+
+  // Playback for recorded stories in the person details panel
+  const storyAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingStoryId, setPlayingStoryId] = useState<string | null>(null);
+
+  const stopStoryAudio = () => {
+    storyAudioRef.current?.pause();
+    storyAudioRef.current = null;
+    setPlayingStoryId(null);
+  };
+
+  const toggleStoryAudio = (story: OralHistory) => {
+    if (playingStoryId === story.id) {
+      stopStoryAudio();
+      return;
+    }
+    stopStoryAudio();
+    if (!story.audioBase64) return;
+    const audio = new Audio(`data:audio/webm;base64,${story.audioBase64}`);
+    audio.onended = () => setPlayingStoryId(null);
+    audio.play().catch(() => setPlayingStoryId(null));
+    storyAudioRef.current = audio;
+    setPlayingStoryId(story.id);
+  };
   const [showForm, setShowForm] = useState(false);
   const [fixedRoleForForm, setFixedRoleForForm] = useState<ProfileRole | undefined>(undefined);
   const [showRecordingStudio, setShowRecordingStudio] = useState(false);
@@ -608,398 +643,283 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F7F2] flex flex-col md:flex-row antialiased text-[#2D2926]">
-      {/* 
-        PREMIUM LEFT SIDEBAR: Hidden on mobile, visible on md and up.
-        Beautifully crafted dark-charcoal column matching the heritage-modern styling.
-        Now fully collapsible with smooth width animations and real-time state survival.
-      */}
-      <aside 
-        id="afrolineo-sidebar" 
-        className={`hidden md:flex flex-col bg-[#1a1918] border-r border-[#2D2926]/15 text-[#fcfbfa] shrink-0 sticky top-0 h-screen justify-between p-5 z-30 transition-all duration-300 relative ${
-          isSidebarCollapsed ? 'w-20 items-center px-2' : 'w-72 lg:w-80'
+    <div className="min-h-screen bg-cream flex flex-col md:flex-row antialiased text-ink">
+      {/* Desktop sidebar (collapsible) */}
+      <aside
+        id="afrolineo-sidebar"
+        className={`hidden md:flex flex-col bg-sand border-r border-line shrink-0 sticky top-0 h-screen justify-between p-4 z-30 transition-all duration-300 relative ${
+          isSidebarCollapsed ? 'w-20 items-center px-2' : 'w-64 lg:w-72'
         }`}
       >
-        {/* Absolute dynamic collapse toggle trigger */}
         <button
           id="sidebar-collapse-toggle"
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="absolute top-6 -right-3 w-6 h-6 rounded-full bg-[#E2A04F] hover:bg-[#f2b05f] text-black border border-[#1a1918] flex items-center justify-center cursor-pointer shadow-md z-40 transition-transform active:scale-95"
-          title={isSidebarCollapsed ? "Expand Sidebar Menu" : "Collapse Sidebar Menu"}
+          className="absolute top-6 -right-3 w-6 h-6 rounded-full bg-white border border-line text-ink-soft hover:text-ink flex items-center justify-center cursor-pointer shadow-sm z-40"
+          aria-label={isSidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
         >
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
 
-        <div className="space-y-8 flex flex-col w-full items-center">
-          {/* Logo brand */}
-          <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'px-1'}`}>
-            <div className="w-10 h-10 border border-[#fcfbfa]/20 bg-[#E2A04F] flex items-center justify-center rotate-2 rounded-sm shadow-sm shrink-0">
-              <FolderHeart className="w-5 h-5 text-black" />
-            </div>
-            {!isSidebarCollapsed && (
-              <div>
-                <h1 className="font-display font-medium text-lg tracking-tight text-white flex items-center gap-2 leading-none">
-                  Afrolineo
-                  <span className="text-[9px] uppercase font-sans font-bold tracking-widest bg-[#E2A04F]/20 text-[#E2A04F] py-0.5 px-2 rounded-sm">
-                    Vault
-                  </span>
-                </h1>
-                <span className="text-[8.5px] uppercase tracking-widest text-[#fcfbfa]/50 font-sans block mt-1.5 leading-normal">
-                  African Oral Genealogy Mapping
-                </span>
-              </div>
-            )}
+        <div className="flex flex-col gap-6 w-full">
+          <div className={`flex items-center gap-2.5 w-full ${isSidebarCollapsed ? 'justify-center' : 'px-2 pt-1'}`}>
+            <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center shrink-0">
+              <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+            </span>
+            {!isSidebarCollapsed && <span className="font-display text-[21px] font-semibold tracking-tight">Afrolineo</span>}
           </div>
 
-          <hr className="border-gray-800/60 w-full" />
-
-          {/* Navigation Links vertical stack */}
-          <div className="space-y-2 w-full">
-            {!isSidebarCollapsed && (
-              <span className="text-[8px] uppercase font-sans tracking-[0.2em] text-gray-500 font-bold block mb-3 px-2">
-                Archives Division
-              </span>
-            )}
-            <nav className="flex flex-col gap-1.5 w-full">
-              <button
-                id="sidebar-nav-tree-btn"
-                onClick={() => setActiveScreen('tree')}
-                className={`text-[10px] uppercase tracking-widest font-bold px-4 py-3 rounded-sm transition-all text-left flex items-center gap-3 cursor-pointer ${
-                  activeScreen === 'tree' 
-                    ? 'bg-[#2a2928] text-[#E2A04F] border-l-2 border-[#E2A04F] pl-3' 
-                    : 'text-gray-300 hover:text-white hover:bg-[#2a2928]/50'
-                } ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-                title="Pedigree Node Map"
-              >
-                <FolderHeart className="w-4 h-4 shrink-0" />
-                {!isSidebarCollapsed && <span>Pedigree Node Map</span>}
-              </button>
-              
-              <button
-                id="sidebar-nav-discovery-btn"
-                onClick={() => setActiveScreen('discovery')}
-                className={`text-[10px] uppercase tracking-widest font-bold px-4 py-3 rounded-sm transition-all text-left flex items-center gap-3 cursor-pointer ${
-                  activeScreen === 'discovery' 
-                    ? 'bg-[#2a2928] text-[#E2A04F] border-l-2 border-[#E2A04F] pl-3' 
-                    : 'text-gray-300 hover:text-white hover:bg-[#2a2928]/50'
-                } ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-                title="Discovery Vault"
-              >
-                <Globe className="w-4 h-4 shrink-0" />
-                {!isSidebarCollapsed && <span>Discovery Vault</span>}
-              </button>
-
-              <button
-                id="sidebar-nav-community-btn"
-                onClick={() => setActiveScreen('community')}
-                className={`text-[10px] uppercase tracking-widest font-bold px-4 py-3 rounded-sm transition-all text-left flex items-center gap-3 cursor-pointer ${
-                  activeScreen === 'community' 
-                    ? 'bg-[#2a2928] text-[#E2A04F] border-l-2 border-[#E2A04F] pl-3' 
-                    : 'text-gray-300 hover:text-white hover:bg-[#2a2928]/50'
-                } ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-                title="Community Vault"
-              >
-                <Users className="w-4 h-4 shrink-0" />
-                {!isSidebarCollapsed && <span>Community Vault</span>}
-              </button>
-              
-              <button
-                id="sidebar-nav-dash-btn"
-                onClick={() => setActiveScreen('dash')}
-                className={`text-[10px] uppercase tracking-widest font-bold px-4 py-3 rounded-sm transition-all text-left flex items-center gap-3 cursor-pointer ${
-                  activeScreen === 'dash' 
-                    ? 'bg-[#2a2928] text-[#E2A04F] border-l-2 border-[#E2A04F] pl-3' 
-                    : 'text-gray-300 hover:text-white hover:bg-[#2a2928]/50'
-                } ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-                title="Founder Metrics"
-              >
-                <Flame className="w-4 h-4 text-[#E2A04F] fill-[#E2A04F] shrink-0" style={activeScreen !== 'dash' ? { fill: 'none' } : {}} />
-                {!isSidebarCollapsed && <span>Founder Metrics</span>}
-              </button>
-
-              <button
-                id="sidebar-nav-about-btn"
-                onClick={() => { setActiveScreen('about'); setSelectedAboutTab('dei'); }}
-                className={`text-[10px] uppercase tracking-widest font-bold px-4 py-3 rounded-sm transition-all text-left flex items-center gap-3 cursor-pointer ${
-                  activeScreen === 'about' 
-                    ? 'bg-[#2a2928] text-[#E2A04F] border-l-2 border-[#E2A04F] pl-3' 
-                    : 'text-gray-300 hover:text-white hover:bg-[#2a2928]/50'
-                } ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-                title="About Platform"
-              >
-                <HelpCircle className="w-4 h-4 text-[#E2A04F] shrink-0" />
-                {!isSidebarCollapsed && <span>About Platform</span>}
-              </button>
-            </nav>
-          </div>
+          <nav aria-label="App" className="flex flex-col gap-1 w-full">
+            {APP_NAV.map(({ id, screen, label, icon: Icon }) => {
+              const active = activeScreen === screen;
+              return (
+                <button
+                  key={screen}
+                  id={id}
+                  onClick={() => {
+                    setActiveScreen(screen);
+                    if (screen === 'about') setSelectedAboutTab('dei');
+                  }}
+                  aria-current={active ? 'page' : undefined}
+                  title={isSidebarCollapsed ? label : undefined}
+                  className={`flex items-center gap-3 rounded-xl text-[15px] transition-colors cursor-pointer ${
+                    isSidebarCollapsed ? 'justify-center w-12 h-12 mx-auto' : 'px-3.5 py-3 text-left'
+                  } ${active ? 'bg-white text-ink font-semibold shadow-[0_1px_2px_rgba(60,40,15,0.08)]' : 'text-ink-soft font-medium hover:bg-white/60'}`}
+                >
+                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'text-[#9A5B14]' : ''}`} aria-hidden="true" />
+                  {!isSidebarCollapsed && <span>{label}</span>}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Sidebar Footer space with user details & actions */}
-        <div className="space-y-4 w-full">
-          <hr className="border-gray-800/60 w-full" />
-          
-          <div className="space-y-2 w-full">
-            <button
-              id="sidebar-io-btn"
-              onClick={() => setShowImportExport(true)}
-              className={`w-full flex items-center justify-between text-[10px] uppercase tracking-wider font-bold p-3 border border-gray-800 hover:border-[#E2A04F] rounded-sm text-gray-300 hover:text-white transition-colors cursor-pointer bg-transparent ${isSidebarCollapsed ? 'justify-center px-1' : ''}`}
-              title="Backup & Restore Sovereign Archive"
-            >
-              <span className="flex items-center gap-2">
-                <Upload className="w-3.5 h-3.5 shrink-0" />
-                {!isSidebarCollapsed && <span>Sovereign Backup</span>}
-              </span>
-              {!isSidebarCollapsed && <span className="text-[8px] bg-gray-800 text-gray-400 px-1 rounded-sm uppercase">IO</span>}
-            </button>
-          </div>
-          
-          {/* Active Seeker Profile Card */}
+        <div className="flex flex-col gap-3 w-full">
+          <button
+            id="sidebar-io-btn"
+            onClick={() => setShowImportExport(true)}
+            title={isSidebarCollapsed ? 'Back up & export' : undefined}
+            className={`flex items-center gap-3 rounded-xl text-[15px] font-medium text-ink-soft hover:bg-white/60 cursor-pointer ${
+              isSidebarCollapsed ? 'justify-center w-12 h-12 mx-auto' : 'px-3.5 py-3'
+            }`}
+          >
+            <Download className="w-5 h-5 shrink-0" aria-hidden="true" />
+            {!isSidebarCollapsed && <span>Back up &amp; export</span>}
+          </button>
+
           {currentUser && (
-            <div className={`bg-[#111110] border border-gray-800/80 rounded-lg p-3 flex flex-col gap-2 shadow-inner w-full ${isSidebarCollapsed ? 'items-center px-1' : ''}`}>
+            <div className={`flex items-center gap-3 rounded-2xl bg-cream border border-line ${isSidebarCollapsed ? 'flex-col p-2' : 'p-3'}`}>
+              <span
+                className="w-9 h-9 rounded-full bg-ink text-cream font-bold text-[13px] flex items-center justify-center shrink-0"
+                title={`${currentUser.name} (${currentUser.email})`}
+              >
+                {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+              </span>
               {!isSidebarCollapsed && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[7px] text-[#E2A04F] font-sans font-black tracking-[0.22em] uppercase">
-                    ACTIVE VAULT SEEKER
-                  </span>
-                  <span className="text-[7px] bg-[#E2A04F]/10 border border-[#E2A04F]/35 text-[#E2A04F] py-0.5 px-1.5 rounded-sm font-semibold text-right">
-                    {currentUser.provider}
-                  </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate leading-tight">{currentUser.name}</p>
+                  <p className="text-[12.5px] text-muted truncate">{currentUser.email}</p>
                 </div>
               )}
-              <div className={`flex items-center gap-2 w-full ${isSidebarCollapsed ? 'flex-col justify-center' : 'justify-between'}`}>
-                <div 
-                  className="w-7 h-7 rounded-full bg-[#E2A04F] text-black font-sans font-bold text-[10px] flex items-center justify-center shrink-0"
-                  title={`${currentUser.name} (${currentUser.email})`}
-                >
-                  {currentUser.name.slice(0, 2).toUpperCase()}
-                </div>
-                {!isSidebarCollapsed ? (
-                  <div className="min-w-0 flex-1 ml-1">
-                    <p className="text-[11px] font-bold text-white truncate leading-tight">
-                      {currentUser.name}
-                    </p>
-                    <p className="text-[9px] text-gray-500 truncate leading-none mt-0.5">
-                      {currentUser.email}
-                    </p>
-                  </div>
-                ) : null}
-                <button
-                  id="sidebar-logout-btn"
-                  onClick={handleLogout}
-                  className="w-7 h-7 rounded-sm border border-gray-800 hover:border-red-500/40 hover:bg-red-950/20 text-gray-400 hover:text-red-400 flex items-center justify-center transition-all cursor-pointer shrink-0"
-                  title="Lock Vault & Log Out"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Copyright Accent */}
-          {!isSidebarCollapsed && (
-            <div className="text-[8px] text-gray-500 font-sans tracking-wide leading-relaxed">
-              Sovereign African Archive <br />
-              © 2026 Afrolineo Project
+              <button
+                id="sidebar-logout-btn"
+                onClick={handleLogout}
+                aria-label="Sign out"
+                title="Sign out"
+                className="w-10 h-10 rounded-lg text-muted hover:text-record hover:bg-white flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <LogOut className="w-[18px] h-[18px]" />
+              </button>
             </div>
           )}
         </div>
       </aside>
 
-      {/* MOBILE COMPACT HEADER: Visible only on smaller layout screens */}
-      <header id="afrolineo-mobile-header" className="md:hidden bg-[#1a1918] border-b border-gray-800 text-[#fcfbfa] sticky top-0 z-40 transition-shadow duration-200">
+      {/* Phone header */}
+      <header id="afrolineo-mobile-header" className="md:hidden bg-cream/95 backdrop-blur border-b border-line sticky top-0 z-40">
         <div className="px-4 h-16 flex items-center justify-between">
-          {/* Logo brand */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 border border-[#fcfbfa]/20 bg-[#E2A04F] flex items-center justify-center rotate-2 rounded-sm shadow-sm shrink-0">
-              <FolderHeart className="w-4 h-4 text-black" />
-            </div>
-            <div>
-              <h1 className="font-display font-medium text-sm tracking-tight text-white leading-none">
-                Afrolineo
-              </h1>
-              <span className="text-[8px] tracking-widest text-[#fcfbfa]/50 font-sans block mt-0.5 uppercase">Heritage Vault</span>
-            </div>
+            <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
+              <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+            </span>
+            <span className="font-display text-xl font-semibold tracking-tight">Afrolineo</span>
           </div>
-
-          {/* Compact actions */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <button
               id="mobile-nav-io-btn"
               onClick={() => setShowImportExport(true)}
-              className="p-2 border border-gray-700 hover:border-[#E2A04F] rounded-sm text-gray-300 hover:text-white transition-colors cursor-pointer bg-transparent"
-              title="Backup & Restore Sovereign Archive"
+              aria-label="Back up and export"
+              className="w-11 h-11 rounded-xl text-ink-soft hover:bg-sand flex items-center justify-center cursor-pointer"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Download className="w-5 h-5" />
             </button>
-
             <button
               id="mobile-logout-btn"
               onClick={handleLogout}
-              className="p-2 border border-rose-950/40 hover:bg-red-950/20 text-gray-400 hover:text-red-400 rounded-sm transition-colors cursor-pointer bg-transparent"
-              title="Lock Vault"
+              aria-label="Sign out"
+              className="w-11 h-11 rounded-xl text-ink-soft hover:bg-sand flex items-center justify-center cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile navigation bottom bar */}
-      <div className="md:hidden bg-[#1a1918] border-t border-gray-800 text-gray-300 fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 h-14 text-center items-center">
-        <button
-          onClick={() => setActiveScreen('tree')}
-          className={`text-[10px] uppercase tracking-wider font-bold h-full flex flex-col justify-center items-center ${activeScreen === 'tree' ? 'text-[#E2A04F] bg-gray-900' : ''}`}
-        >
-          <FolderHeart className="w-4 h-4 mb-1" />
-          Tree
-        </button>
-        <button
-          onClick={() => setActiveScreen('discovery')}
-          className={`text-[10px] uppercase tracking-wider font-bold h-full flex flex-col justify-center items-center ${activeScreen === 'discovery' ? 'text-[#E2A04F] bg-gray-900' : ''}`}
-        >
-          <Globe className="w-4 h-4 mb-1" />
-          Discover
-        </button>
-        <button
-          onClick={() => setActiveScreen('community')}
-          className={`text-[10px] uppercase tracking-wider font-bold h-full flex flex-col justify-center items-center ${activeScreen === 'community' ? 'text-[#E2A04F] bg-gray-900' : ''}`}
-        >
-          <Users className="w-4 h-4 mb-1" />
-          Kinship
-        </button>
-        <button
-          onClick={() => setActiveScreen('dash')}
-          className={`text-[10px] uppercase tracking-wider font-bold h-full flex flex-col justify-center items-center ${activeScreen === 'dash' ? 'text-[#E2A04F] bg-gray-900' : ''}`}
-        >
-          <Flame className="w-4 h-4 mb-1" />
-          Metrics
-        </button>
-        <button
-          onClick={() => { setActiveScreen('about'); setSelectedAboutTab('dei'); }}
-          className={`text-[10px] uppercase tracking-wider font-bold h-full flex flex-col justify-center items-center ${activeScreen === 'about' ? 'text-[#E2A04F] bg-gray-900' : ''}`}
-        >
-          <HelpCircle className="w-4 h-4 mb-1" />
-          About
-        </button>
-      </div>
+      {/* Phone bottom navigation */}
+      <nav aria-label="App" className="md:hidden bg-white border-t border-line fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+        {APP_NAV.map(({ screen, shortLabel, icon: Icon }) => {
+          const active = activeScreen === screen;
+          return (
+            <button
+              key={screen}
+              onClick={() => {
+                setActiveScreen(screen);
+                if (screen === 'about') setSelectedAboutTab('dei');
+              }}
+              aria-current={active ? 'page' : undefined}
+              className={`h-16 flex flex-col items-center justify-center gap-1 text-xs cursor-pointer ${active ? 'text-ink font-bold' : 'text-muted font-medium'}`}
+            >
+              <Icon className={`w-[22px] h-[22px] ${active ? 'text-[#9A5B14]' : ''}`} aria-hidden="true" />
+              {shortLabel}
+            </button>
+          );
+        })}
+      </nav>
 
       {/* RIGHT SIDE MAIN WRAPPER CONTAINER */}
       <div className="flex-1 flex flex-col overflow-y-auto min-h-screen">
         {/* Main Core Body Container */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:py-8">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:py-8">
           
           {/* Metric widgets row summary (top visual) */}
-          <section id="metric-top-bar" className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-            <div className="bg-white border border-[#2D2926]/12 p-6 rounded-2xl flex items-center justify-between shadow-xs group hover:border-[#E2A04F] hover:shadow-[0_12px_30px_rgba(226,160,79,0.12)] transition-all duration-300 relative overflow-hidden">
-              {/* Top glowing high-contrast accent highlight border */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E2A04F]/20 via-[#E2A04F] to-[#E2A04F]/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-            <div>
-              <span className="text-[7.5px] text-[#2D2926]/40 font-sans tracking-[0.25em] uppercase block font-black mb-2">
-                PEDIGREE LINEAGE DEPTH
-              </span>
-              <p className="text-3xl font-serif font-black text-[#2D2926] tracking-tight transition-colors group-hover:text-[#E2A04F] duration-300">
-                {profiles.length} <span className="text-xs font-sans tracking-wider text-[#2D2926]/50 font-normal">Kin Listed</span>
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#E2A04F]/10 border border-[#E2A04F]/25 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-[#E2A04F]/20 group-hover:border-[#E2A04F]/50 transition-all duration-300">
-              <FolderHeart className="w-5 h-5 text-[#2D2926]" />
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#2D2926]/12 p-6 rounded-2xl flex items-center justify-between shadow-xs group hover:border-[#E2A04F] hover:shadow-[0_12px_30px_rgba(226,160,79,0.12)] transition-all duration-300 relative overflow-hidden">
-            {/* Top glowing high-contrast accent highlight border */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E2A04F]/20 via-[#E2A04F] to-[#E2A04F]/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-            <div>
-              <span className="text-[7.5px] text-[#2D2926]/40 font-sans tracking-[0.25em] uppercase block font-black mb-2">
-                TOTAL STORIES CAPTURED
-              </span>
-              <p className="text-3xl font-serif font-black text-[#2D2926] tracking-tight transition-colors group-hover:text-[#E2A04F] duration-300">
-                {totalMinutesRecorded} <span className="text-xs font-sans tracking-wider text-[#2D2926]/50 font-normal">Oral Mins</span>
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#E2A04F]/10 border border-[#E2A04F]/25 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-[#E2A04F]/20 group-hover:border-[#E2A04F]/50 transition-all duration-300">
-              <Mic className="w-5 h-5 text-[#2D2926]" />
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#2D2926]/12 p-6 rounded-2xl flex items-center justify-between shadow-xs group hover:border-emerald-650 hover:shadow-[0_12px_30px_rgba(16,185,129,0.12)] transition-all duration-300 relative overflow-hidden">
-            {/* Top glowing high-contrast accent highlight border */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500/20 via-emerald-500 to-emerald-500/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-            <div>
-              <span className="text-[7.5px] text-[#2D2926]/40 font-sans tracking-[0.25em] uppercase block font-black mb-2">
-                VERIFIED DEEP PROFILES
-              </span>
-              <p className="text-3xl font-serif font-black text-emerald-800 tracking-tight">
-                {deepProfilesCount} <span className="text-xs font-sans tracking-wider text-[#2D2926]/40 font-normal">Active Vaults</span>
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-250 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-emerald-100 group-hover:border-emerald-400 transition-all duration-300">
-              <Sparkles className="w-5 h-5 text-emerald-800" />
-            </div>
-          </div>
-        </section>
-
-        {/* 1. Main SCREEN: Lineage tree */}
-        {activeScreen === 'tree' && (
-          <div className="space-y-6">
-            
-            {/* Custom Ancestral Guidance banner */}
-            {currentUser && currentUser.ethnicGroup && (
-              <div id="ancestral-guidance-card" className="bg-[#FAF8F5] border border-emerald-800/25 border-l-4 border-l-emerald-500 p-5 rounded-sm flex items-start gap-4 shadow-sm animate-pulse">
-                <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
-                  <Sparkles className="w-4 h-4 text-emerald-555 animate-bounce" />
+          <section id="metric-top-bar" aria-label="Archive summary" className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+            {[
+              { label: 'People', value: profiles.length, icon: FolderHeart, tint: 'bg-ochre-tint text-paternal-ink' },
+              { label: 'Minutes recorded', value: totalMinutesRecorded, icon: Mic, tint: 'bg-ochre-tint text-paternal-ink' },
+              { label: 'Full profiles', value: deepProfilesCount, icon: Sparkles, tint: 'bg-forest-tint text-forest' },
+            ].map(({ label, value, icon: Icon, tint }) => (
+              <div key={label} className="bg-white border border-line rounded-2xl p-3 sm:p-5 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-display text-2xl sm:text-3xl font-medium text-ink leading-none">{value}</p>
+                  <p className="text-xs sm:text-sm text-muted mt-1.5 leading-tight">{label}</p>
                 </div>
-                <div>
-                  <h4 className="text-[10px] uppercase tracking-[0.18em] font-black text-emerald-800 font-sans leading-none mb-1.5">
-                    Guided Ancestral Calibration Active
-                  </h4>
-                  <p className="text-xs text-[#2D2926]/80 leading-relaxed font-light">
-                    Afrolineo has successfully calibrated for <strong className="text-black font-semibold">{currentUser.ethnicGroup}</strong> linguistic lineages in <strong className="text-black font-semibold">{currentUser.ancestralCountry || 'Nigeria'}</strong>
-                    {currentUser.ancestralState && (
-                      <>
-                        {', '}
-                        <strong className="text-black font-semibold">{currentUser.ancestralState}</strong>
-                        {currentUser.ancestralWard && (
-                          <>
-                            {' ('}
-                            <strong className="text-emerald-800 font-mono font-bold font-sans text-[11px] bg-emerald-100/50 px-1 py-0.5 rounded">{currentUser.ancestralWard}</strong>
-                            {')'}
-                          </>
-                        )}
-                      </>
-                    )}
-                    . Historical reference libraries, voice translation helpers, and custom prompts are fine-tuned. Lead memory custodian is registered as <strong className="text-black font-mono font-semibold">{currentUser.custodianName || 'Grandmother'}</strong> with a progress status of <span className="text-emerald-800 font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded-xs">{currentUser.knowledgeLevel || 'Exploring'}</span>.
-                  </p>
-                </div>
+                <span className={`hidden sm:flex w-11 h-11 rounded-full items-center justify-center shrink-0 ${tint}`}>
+                  <Icon className="w-5 h-5" aria-hidden="true" />
+                </span>
               </div>
-            )}
-            
-            {/* Context bar */}
-            <div className="bg-[#FAF8F5] border border-[#2D2926]/12 p-5 rounded-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+            ))}
+          </section>
+
+          {/* 1. Main SCREEN: Lineage tree */}
+        {activeScreen === 'tree' && (() => {
+          const coreRoles: { role: ProfileRole; label: string }[] = [
+            { role: 'self', label: 'yourself' },
+            { role: 'father', label: 'your father' },
+            { role: 'mother', label: 'your mother' },
+            { role: 'paternal_grandfather', label: 'your father’s father' },
+            { role: 'paternal_grandmother', label: 'your father’s mother' },
+            { role: 'maternal_grandfather', label: 'your mother’s father' },
+            { role: 'maternal_grandmother', label: 'your mother’s mother' },
+          ];
+          const missing = coreRoles.filter(({ role }) => !profiles.some((p) => p.role === role));
+          const filled = coreRoles.length - missing.length;
+          const familyAnchor = profiles.find((p) => p.role === 'father') || profiles.find((p) => p.role === 'self');
+          const familyName = familyAnchor ? familyAnchor.fullName.trim().split(' ').slice(-1)[0] : '';
+          const generations = [
+            profiles.some((p) => p.role.includes('grand')),
+            profiles.some((p) => ['father', 'mother', 'uncle', 'aunt'].includes(p.role)),
+            profiles.some((p) => ['self', 'sibling'].includes(p.role)),
+          ].filter(Boolean).length;
+          const elders = ['paternal_grandmother', 'maternal_grandmother', 'paternal_grandfather', 'maternal_grandfather', 'mother', 'father', 'self'];
+          const unrecordedElder = elders
+            .map((role) => profiles.find((p) => p.role === role))
+            .find((p) => p && !recordings.some((r) => r.profileId === p.id));
+          const recordTarget = elders.map((role) => profiles.find((p) => p.role === role)).find(Boolean);
+
+          return (
+          <div className="space-y-5">
+            {/* Page header */}
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h3 className="font-display font-semibold text-sm text-[#2D2926]">Lineage Map View</h3>
-                <p className="text-xs text-[#2D2926]/70 mt-1 leading-relaxed">
-                  Interact with nodes vertically (3 generations) or horizontally ( lateral relationships uncles/aunts and siblings). Click missing connections to establish lineage metadata.
+                <h1 className="font-display font-medium text-[28px] sm:text-[34px] leading-tight tracking-[-0.02em]">
+                  {familyName ? `${familyName} family` : 'Your family tree'}
+                </h1>
+                <p className="mt-1 text-muted">
+                  {profiles.length} {profiles.length === 1 ? 'person' : 'people'} · {generations} {generations === 1 ? 'generation' : 'generations'} · {recordings.length} {recordings.length === 1 ? 'story' : 'stories'} recorded
                 </p>
               </div>
-
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2.5 w-full sm:w-auto">
+                {recordTarget && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProfile(recordTarget);
+                      setShowRecordingStudio(true);
+                    }}
+                    className="flex-1 sm:flex-none h-11.5 inline-flex items-center justify-center gap-2 px-4 rounded-xl border-[1.5px] border-[#CFC4B4] bg-white font-semibold hover:border-ink cursor-pointer whitespace-nowrap"
+                  >
+                    <Mic className="w-[18px] h-[18px] text-record" aria-hidden="true" />
+                    Record a story
+                  </button>
+                )}
                 <button
+                  type="button"
                   id="add-custom-member-btn"
                   onClick={() => {
                     setFixedRoleForForm(undefined);
                     setShowForm(true);
                   }}
-                  className="px-4.5 py-2.5 bg-[#2D2926] text-[#F9F7F2] hover:bg-[#E2A04F] hover:text-[#2D2926] text-[10px] uppercase font-bold tracking-widest transition-colors cursor-pointer rounded-sm"
+                  className="flex-1 sm:flex-none h-11.5 inline-flex items-center justify-center gap-2 px-4 sm:px-5 rounded-xl bg-ochre font-semibold text-ink hover:brightness-95 cursor-pointer whitespace-nowrap"
                 >
-                  Establish Custom Node Link
+                  <Plus className="w-[18px] h-[18px]" aria-hidden="true" />
+                  Add relative
                 </button>
               </div>
             </div>
 
-            {/* Pedigree Tree component */}
-            <FamilyTree 
+            {/* Next-step nudge */}
+            {(missing.length > 0 || unrecordedElder) && (
+              <div id="ancestral-guidance-card" className="flex flex-wrap items-center gap-3.5 bg-white border border-line rounded-2xl px-4.5 py-3.5">
+                <span className="hidden sm:flex shrink-0 w-10 h-10 rounded-full bg-ochre-tint text-paternal-ink items-center justify-center">
+                  {missing.length > 0 ? <Plus className="w-5 h-5" aria-hidden="true" /> : <Mic className="w-5 h-5" aria-hidden="true" />}
+                </span>
+                <div className="flex-[1_1_260px] min-w-0">
+                  <p className="font-semibold">
+                    {missing.length > 0 ? `Next step: add ${missing[0].label}` : `Next step: record ${unrecordedElder!.fullName}`}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {missing.length > 0
+                      ? 'Even a first name helps relatives find you.'
+                      : 'Their voice is the part of your archive that can’t be rebuilt later.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <span className="text-[13px] text-muted whitespace-nowrap">Tree {filled} of {coreRoles.length}</span>
+                  <span aria-hidden="true" className="flex-1 sm:flex-none sm:w-28 h-2 rounded-full bg-sand overflow-hidden flex">
+                    <span className="bg-forest" style={{ width: `${(filled / coreRoles.length) * 100}%` }} />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (missing.length > 0) {
+                        setFixedRoleForForm(missing[0].role);
+                        setShowForm(true);
+                      } else if (unrecordedElder) {
+                        setSelectedProfile(unrecordedElder);
+                        setShowRecordingStudio(true);
+                      }
+                    }}
+                    className="h-11 px-4 rounded-xl bg-ink text-cream font-semibold text-sm hover:bg-ink-soft cursor-pointer"
+                  >
+                    {missing.length > 0 ? 'Add' : 'Record'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <FamilyTree
               profiles={profiles}
+              recordings={recordings}
+              selectedProfileId={selectedProfile?.id}
               onSelectProfile={(p) => setSelectedProfile(p)}
               onAddProfileWithRole={(role) => {
                 setFixedRoleForForm(role);
@@ -1007,7 +927,8 @@ export default function App() {
               }}
             />
           </div>
-        )}
+          );
+        })()}
 
         {/* 2. Main SCREEN: Discovery Network hub */}
         {activeScreen === 'discovery' && (
@@ -1072,7 +993,7 @@ export default function App() {
                 </div>
                 
                 {currentUser && (
-                  <div className="bg-[#FAF8F5] border border-[#2D2926]/10 px-3 py-1.5 rounded-sm flex items-center gap-2 text-[10px]">
+                  <div className="bg-[#FAF8F5] border border-[#2D2926]/10 px-3 py-1.5 rounded-sm flex items-center gap-2 text-xs">
                     <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
                     <span className="font-mono font-bold text-[#2D2926]">
                       Active User: <span className="text-[#E2A04F]">{currentUser.name}</span>
@@ -1091,7 +1012,7 @@ export default function App() {
                       <TrendingUp className="w-4 h-4 text-[#E2A04F]" />
                       Sovereign Growth Milestones
                     </h4>
-                    <span className="text-[9px] font-mono font-bold text-gray-400">V1 Cohort Status</span>
+                    <span className="text-xs font-mono font-bold text-gray-400">V1 Cohort Status</span>
                   </div>
                   
                   <div className="space-y-4">
@@ -1126,14 +1047,14 @@ export default function App() {
                       <ShieldAlert className="w-4 h-4 shrink-0" />
                       <h4 className="text-xs font-semibold uppercase tracking-wider">Verified Kill Switch Clause</h4>
                     </div>
-                    <span className="text-[8px] bg-red-100 text-red-800 font-mono font-bold px-1.5 py-0.5 rounded">60-Day Mandate</span>
+                    <span className="text-xs bg-red-100 text-red-800 font-mono font-bold px-1.5 py-0.5 rounded">60-Day Mandate</span>
                   </div>
                   
-                  <blockquote className="text-[11px] text-gray-650 bg-red-50/50 p-3 italic rounded-lg border border-red-150 leading-relaxed font-serif">
+                  <blockquote className="text-[12.5px] text-gray-650 bg-red-50/50 p-3 italic rounded-lg border border-red-150 leading-relaxed font-serif">
                     "If we do not achieve 500 user-generated oral recordings and a 4.2-star rating within 60 days, we will pivot to legacy B2B curation archives for funeral homes and cultural sites."
                   </blockquote>
                   
-                  <div className="flex items-center justify-between text-[10px] pt-1 font-mono">
+                  <div className="flex items-center justify-between text-xs pt-1 font-mono">
                     <span className="text-gray-500">Currently Operating in:</span>
                     <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2 py-0.5 rounded">
                       Validated Core Mode
@@ -1149,7 +1070,7 @@ export default function App() {
                     <Smartphone className="w-4 h-4 text-[#E2A04F]" />
                     Device Type Logins
                   </h4>
-                  <span className="text-[10px] text-gray-500 font-mono">Total tracked: {totalSessions} sessions</span>
+                  <span className="text-xs text-gray-500 font-mono">Total tracked: {totalSessions} sessions</span>
                 </div>
 
                 <div className="space-y-4">
@@ -1176,21 +1097,21 @@ export default function App() {
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="p-2.5 bg-white rounded-lg border border-gray-150 flex flex-col items-center">
                       <Smartphone className="w-4 h-4 text-[#E2A04F] mb-1" />
-                      <span className="text-[10px] uppercase font-sans tracking-wider text-gray-500 block font-bold">Mobile Screen</span>
+                      <span className="text-xs uppercase font-sans tracking-wider text-gray-500 block font-bold">Mobile Screen</span>
                       <p className="text-lg font-serif font-black text-gray-900 mt-0.5">{mobilePct}%</p>
-                      <span className="text-[9px] text-gray-400 font-mono mt-0.5">{mobileSessions} logins</span>
+                      <span className="text-xs text-gray-400 font-mono mt-0.5">{mobileSessions} logins</span>
                     </div>
                     <div className="p-2.5 bg-white rounded-lg border border-gray-150 flex flex-col items-center">
                       <Laptop className="w-4 h-4 text-[#2D2926] mb-1" />
-                      <span className="text-[10px] uppercase font-sans tracking-wider text-gray-500 block font-bold">Desktop Clients</span>
+                      <span className="text-xs uppercase font-sans tracking-wider text-gray-500 block font-bold">Desktop Clients</span>
                       <p className="text-lg font-serif font-black text-gray-900 mt-0.5">{desktopPct}%</p>
-                      <span className="text-[9px] text-gray-400 font-mono mt-0.5">{desktopSessions} logins</span>
+                      <span className="text-xs text-gray-400 font-mono mt-0.5">{desktopSessions} logins</span>
                     </div>
                     <div className="p-2.5 bg-white rounded-lg border border-gray-150 flex flex-col items-center">
                       <Tablet className="w-4 h-4 text-[#7A8B7B] mb-1" />
-                      <span className="text-[10px] uppercase font-sans tracking-wider text-gray-500 block font-bold">Tablet Devices</span>
+                      <span className="text-xs uppercase font-sans tracking-wider text-gray-500 block font-bold">Tablet Devices</span>
                       <p className="text-lg font-serif font-black text-gray-900 mt-0.5">{tabletPct}%</p>
-                      <span className="text-[9px] text-gray-400 font-mono mt-0.5">{tabletSessions} logins</span>
+                      <span className="text-xs text-gray-400 font-mono mt-0.5">{tabletSessions} logins</span>
                     </div>
                   </div>
                 </div>
@@ -1210,7 +1131,7 @@ export default function App() {
 
                   <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-1">
                         <span>1. Auth Gate Onboarding</span>
                         <span className="font-bold text-gray-700">100% conversion</span>
                       </div>
@@ -1220,7 +1141,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-1">
                         <span>2. Pedigree Node Customization</span>
                         <span className="font-bold text-gray-700">82% conversion</span>
                       </div>
@@ -1230,7 +1151,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-1">
                         <span>3. Spoken Memory Capture</span>
                         <span className="font-bold text-gray-700">65% conversion</span>
                       </div>
@@ -1240,7 +1161,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-1">
                         <span>4. Kinship Community Match</span>
                         <span className="font-bold text-gray-700">46% conversion</span>
                       </div>
@@ -1250,7 +1171,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-[10px] text-gray-500 font-mono mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-1">
                         <span>5. Portable Secure Backup</span>
                         <span className="font-bold text-gray-700">38% conversion</span>
                       </div>
@@ -1278,7 +1199,7 @@ export default function App() {
                       </div>
                       <div className="text-xs">
                         <p className="font-bold text-gray-800">1. Onboarded Authenticated</p>
-                        <p className="text-[10px] text-gray-500">Validated credentials fine-tuned to maternal/paternal ancestral districts.</p>
+                        <p className="text-xs text-gray-500">Validated credentials fine-tuned to maternal/paternal ancestral districts.</p>
                       </div>
                     </div>
 
@@ -1299,13 +1220,13 @@ export default function App() {
                           {!isStep2Complete && (
                             <button 
                               onClick={() => setActiveScreen('tree')}
-                              className="text-[9px] uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
+                              className="text-xs uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
                             >
                               Open Map
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500">Edit default names or append ancestral parents on your pedigree chart.</p>
+                        <p className="text-xs text-gray-500">Edit default names or append ancestral parents on your pedigree chart.</p>
                       </div>
                     </div>
 
@@ -1329,13 +1250,13 @@ export default function App() {
                                 setActiveScreen('tree');
                                 setShowRecordingStudio(true);
                               }}
-                              className="text-[9px] uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
+                              className="text-xs uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
                             >
                               Record Voice
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500">Record a live audio memo or drop a WAV file onto an elder's profile.</p>
+                        <p className="text-xs text-gray-500">Record a live audio memo or drop a WAV file onto an elder's profile.</p>
                       </div>
                     </div>
 
@@ -1356,13 +1277,13 @@ export default function App() {
                           {!isStep4Complete && (
                             <button 
                               onClick={() => setActiveScreen('community')}
-                              className="text-[9px] uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
+                              className="text-xs uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
                             >
                               Connect Kin
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500">Link nodes with other users by matching ancestral compound overlap districts.</p>
+                        <p className="text-xs text-gray-500">Link nodes with other users by matching ancestral compound overlap districts.</p>
                       </div>
                     </div>
 
@@ -1383,13 +1304,13 @@ export default function App() {
                           {!isStep5Complete && (
                             <button 
                               onClick={() => setShowImportExport(true)}
-                              className="text-[9px] uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
+                              className="text-xs uppercase tracking-wider font-extrabold text-[#E2A04F] hover:underline cursor-pointer"
                             >
                               Export Now
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500">Backup your sovereign records locally as a secure offline .afrolineo archive.</p>
+                        <p className="text-xs text-gray-500">Backup your sovereign records locally as a secure offline .afrolineo archive.</p>
                       </div>
                     </div>
 
@@ -1405,7 +1326,7 @@ export default function App() {
                       <FileText className="w-4 h-4 text-[#2D2926]" />
                       Sovereign User Login Sessions
                     </h4>
-                    <p className="text-[10px] text-gray-400 mt-0.5 leading-normal">
+                    <p className="text-xs text-gray-400 mt-0.5 leading-normal">
                       Secured telemetry logging matching verified ancestral custodians accessing the heritage capsule.
                     </p>
                   </div>
@@ -1422,7 +1343,7 @@ export default function App() {
                 <div className="overflow-x-auto">
                   <div className="max-h-[240px] overflow-y-auto border border-gray-150 rounded-lg">
                     <table className="min-w-full divide-y divide-gray-150 text-left">
-                      <thead className="bg-[#FAF8F5] sticky top-0 text-[9px] uppercase font-sans tracking-wider text-gray-500 font-bold">
+                      <thead className="bg-[#FAF8F5] sticky top-0 text-xs uppercase font-sans tracking-wider text-gray-500 font-bold">
                         <tr>
                           <th className="px-4 py-2.5">User Custodian</th>
                           <th className="px-4 py-2.5">Device Type</th>
@@ -1431,13 +1352,13 @@ export default function App() {
                           <th className="px-4 py-2.5 text-center">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-150 text-[11px] font-mono text-gray-700 bg-white">
+                      <tbody className="divide-y divide-gray-150 text-[12.5px] font-mono text-gray-700 bg-white">
                         {filteredSessions.length > 0 ? (
                           filteredSessions.map((session) => (
                             <tr key={session.id} className="hover:bg-gray-50/50 transition-colors">
                               <td className="px-4 py-3">
                                 <div className="font-sans font-semibold text-gray-900">{session.name}</div>
-                                <div className="text-[10px] text-gray-400">{session.email}</div>
+                                <div className="text-xs text-gray-400">{session.email}</div>
                               </td>
                               <td className="px-4 py-3">
                                 <span className="flex items-center gap-1.5 text-gray-800">
@@ -1457,17 +1378,17 @@ export default function App() {
                                   {session.location}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-gray-500 text-[10.5px]">
+                              <td className="px-4 py-3 text-gray-500 text-xs">
                                 {session.timestamp}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 {session.status === 'Active' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-sans font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-sans font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                                     Active Now
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-sans font-bold bg-gray-100 text-gray-500 border border-gray-200">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-bold bg-gray-100 text-gray-500 border border-gray-200">
                                     Closed
                                   </span>
                                 )}
@@ -1493,7 +1414,7 @@ export default function App() {
                   Product Loop Instructions: The "Story Gap" Trigger
                 </h5>
                 <p className="text-xs text-gray-700 leading-relaxed">
-                  Rather than asking generic user feedback, Afrolineo implements a **Story Gap Alert**. When you select a profile node with **zero linked records**, the drawer nudges with direct questions: *"You haven't recorded a memory yet. What is one wisdom you want the next generation to remember?"* This stimulates instant elder interview recording trigger actions.
+                  Rather than asking generic user feedback, Afrolineo implements a <strong>Story Gap Alert</strong>. When you select a profile node with <strong>zero linked records</strong>, the drawer nudges with direct questions: <em>"You haven't recorded a memory yet. What is one wisdom you want the next generation to remember?"</em> This stimulates instant elder interview recording trigger actions.
                 </p>
               </div>
             </div>
@@ -1506,7 +1427,7 @@ export default function App() {
             {/* Top Header Banner */}
             <div className="bg-[#2D2926] text-[#F9F7F2] p-6 sm:p-8 rounded-sm border-l-4 border-l-[#E2A04F] shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <span className="text-[9px] uppercase tracking-[0.25em] text-[#E2A04F] font-black block mb-2 font-sans">
+                <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-black block mb-2 font-sans">
                   Corporate & Cultural Directory
                 </span>
                 <h2 className="text-xl sm:text-2xl font-display font-black uppercase tracking-wider text-white">
@@ -1518,7 +1439,7 @@ export default function App() {
               </div>
               <button
                 onClick={() => setActiveScreen('tree')}
-                className="px-4.5 py-2.5 bg-[#E2A04F] hover:bg-[#FAF8F5] hover:text-[#2D2926] text-[#2D2926] text-[10px] uppercase font-bold tracking-widest transition-all rounded-sm shrink-0 flex items-center gap-2 cursor-pointer shadow-sm"
+                className="px-4.5 py-2.5 bg-[#E2A04F] hover:bg-[#FAF8F5] hover:text-[#2D2926] text-[#2D2926] text-xs uppercase font-bold tracking-widest transition-all rounded-sm shrink-0 flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <FolderHeart className="w-3.5 h-3.5" />
                 Return to Tree Map
@@ -1530,7 +1451,7 @@ export default function App() {
               
               {/* Tab Navigation Menu */}
               <div className="md:col-span-1 bg-[#FAF8F5] border border-[#2D2926]/12 rounded-sm p-4 space-y-3 shadow-xs">
-                <span className="text-[8.5px] uppercase font-sans tracking-[0.18em] text-gray-500 font-bold block mb-1 px-1">
+                <span className="text-xs uppercase font-sans tracking-[0.18em] text-gray-500 font-bold block mb-1 px-1">
                   Browse Sections
                 </span>
                 <nav className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 md:gap-2">
@@ -1666,7 +1587,7 @@ export default function App() {
                 </nav>
 
                 {/* Micro badge indicator */}
-                <div className="border-t border-gray-200 pt-3 hidden md:block text-[10px] text-gray-500 font-mono text-center">
+                <div className="border-t border-gray-200 pt-3 hidden md:block text-xs text-gray-500 font-mono text-center">
                   Live Compliance • 2026
                 </div>
               </div>
@@ -1678,7 +1599,7 @@ export default function App() {
                 {selectedAboutTab === 'dei' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">DEI Pledge</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">DEI Pledge</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Bridging the Ancestral Data Desert</h3>
                     </div>
 
@@ -1688,7 +1609,7 @@ export default function App() {
 
                     <blockquote className="border-l-4 border-[#E2A04F] pl-4 italic text-gray-600 my-4 text-xs font-serif leading-relaxed">
                       "In many parts of Africa, a family tree is not drawn on a paper kept in a vault—it is recited in song during village festivals, or told under the shade of a sacred baobab. When a grand-uncle dies, an entire library of land ownership and cousins burns to ashes."
-                      <cite className="block text-[10px] font-mono uppercase font-bold text-gray-500 mt-1.5 not-italic">— Mazi Chinedu, Igbo Historical Elder Representative</cite>
+                      <cite className="block text-xs font-mono uppercase font-bold text-gray-500 mt-1.5 not-italic">— Mazi Chinedu, Igbo Historical Elder Representative</cite>
                     </blockquote>
 
                     <h4 className="font-display font-bold text-xs uppercase tracking-wide text-[#2D2926] pt-2">Our Three Strategic Inclusion Imperatives:</h4>
@@ -1697,7 +1618,7 @@ export default function App() {
                       <div className="bg-[#FAF8F5] p-4 border border-gray-150 rounded-sm">
                         <span className="text-xl block mb-1">🌍</span>
                         <h5 className="font-sans font-bold text-xs text-[#2D2926] mb-1">Epistemic Equity</h5>
-                        <p className="text-[11px] text-gray-600 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 leading-relaxed">
                           Elevating verbal testimonies and oral testaments to the exact same database validity as written government files.
                         </p>
                       </div>
@@ -1705,7 +1626,7 @@ export default function App() {
                       <div className="bg-[#FAF8F5] p-4 border border-gray-150 rounded-sm">
                         <span className="text-xl block mb-1">🔊</span>
                         <h5 className="font-sans font-bold text-xs text-[#2D2926] mb-1">Acoustic Justice</h5>
-                        <p className="text-[11px] text-gray-600 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 leading-relaxed">
                           Refining high-fidelity noise reduction algorithms to respect the deep pitch and tonal accents of non-English narratives.
                         </p>
                       </div>
@@ -1713,7 +1634,7 @@ export default function App() {
                       <div className="bg-[#FAF8F5] p-4 border border-gray-150 rounded-sm">
                         <span className="text-xl block mb-1">🗺️</span>
                         <h5 className="font-sans font-bold text-xs text-[#2D2926] mb-1">Ancestral Geometry</h5>
-                        <p className="text-[11px] text-gray-600 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 leading-relaxed">
                           Replacing generic lat-long coordinates with localized family compound quarters and tribal village boundaries.
                         </p>
                       </div>
@@ -1727,7 +1648,7 @@ export default function App() {
                           setSelectedProfile(undefined);
                           setShowForm(true);
                         }}
-                        className="px-4 py-2 border border-[#E2A04F] hover:bg-[#E2A04F] hover:text-[#2D2926] text-[#E2A04F] font-sans font-bold uppercase tracking-wider text-[10px] rounded-sm transition-colors cursor-pointer"
+                        className="px-4 py-2 border border-[#E2A04F] hover:bg-[#E2A04F] hover:text-[#2D2926] text-[#E2A04F] font-sans font-bold uppercase tracking-wider text-xs rounded-sm transition-colors cursor-pointer"
                       >
                         Create Custom Node
                       </button>
@@ -1739,7 +1660,7 @@ export default function App() {
                 {selectedAboutTab === 'careers' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Work With Us</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Work With Us</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase font-sans">Build the Tools of Spoken Memory</h3>
                     </div>
 
@@ -1749,7 +1670,7 @@ export default function App() {
 
                     {/* Active Jobs Deck */}
                     <div className="space-y-3 pt-2">
-                      <h4 className="text-[10px] uppercase tracking-widest font-black text-gray-400 font-sans">Active Positions (2026)</h4>
+                      <h4 className="text-xs uppercase tracking-widest font-black text-gray-400 font-sans">Active Positions (2026)</h4>
                       
                       {[
                         {
@@ -1781,7 +1702,7 @@ export default function App() {
                           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                             <div>
                               <h5 className="font-sans font-bold text-xs text-[#2D2926]">{job.title}</h5>
-                              <div className="flex gap-2 text-[9px] text-gray-500 font-mono mt-0.5">
+                              <div className="flex gap-2 text-xs text-gray-500 font-mono mt-0.5">
                                 <span>{job.dept}</span>
                                 <span>•</span>
                                 <span>{job.location}</span>
@@ -1792,7 +1713,7 @@ export default function App() {
                                 setExpandedCareerId(expandedCareerId === job.id ? null : job.id);
                                 setSelectedCareerRole(job.title);
                               }}
-                              className="self-start sm:self-center px-3 py-1 text-[9px] uppercase tracking-wider font-bold bg-[#2D2926] hover:bg-[#E2A04F] hover:text-black text-white transition-colors rounded-xs cursor-pointer"
+                              className="self-start sm:self-center px-3 py-1 text-xs uppercase tracking-wider font-bold bg-[#2D2926] hover:bg-[#E2A04F] hover:text-black text-white transition-colors rounded-xs cursor-pointer"
                             >
                               {expandedCareerId === job.id ? 'Close details' : 'View & Apply'}
                             </button>
@@ -1801,7 +1722,7 @@ export default function App() {
                           {expandedCareerId === job.id && (
                             <div className="mt-4 pt-3 border-t border-gray-200 text-xs text-gray-700 space-y-3 animate-slideDown">
                               <p className="leading-relaxed">{job.desc}</p>
-                              <div className="bg-white p-2.5 rounded border border-gray-150 flex justify-between text-[10px] font-mono text-gray-500">
+                              <div className="bg-white p-2.5 rounded border border-gray-150 flex justify-between text-xs font-mono text-gray-500">
                                 <span>Compensation: {job.salary}</span>
                                 <span className="text-[#E2A04F] font-bold">Offline Security Clearance Required</span>
                               </div>
@@ -1819,7 +1740,7 @@ export default function App() {
                                   }}
                                   className="border-t border-dashed border-gray-200 pt-3 space-y-3"
                                 >
-                                  <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold block">Apply directly to this role</span>
+                                  <span className="text-xs uppercase tracking-wider text-gray-400 font-bold block">Apply directly to this role</span>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <input 
                                       type="text" 
@@ -1856,7 +1777,7 @@ export default function App() {
                                   </div>
                                   <button
                                     type="submit"
-                                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-sans font-bold uppercase tracking-wider text-[10px] rounded-sm transition-colors cursor-pointer font-semibold"
+                                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-sans font-bold uppercase tracking-wider text-xs rounded-sm transition-colors cursor-pointer font-semibold"
                                   >
                                     Submit Application
                                   </button>
@@ -1866,7 +1787,7 @@ export default function App() {
                                   <p className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1">
                                     <Check className="w-4 h-4 text-emerald-600 inline" /> Application Received!
                                   </p>
-                                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                                  <p className="text-[12.5px] text-emerald-700 leading-relaxed">
                                     Thank you, <strong className="text-emerald-900">{careersApplicantName}</strong>. Your request for the role of <strong>{selectedCareerRole}</strong> has been cataloged into our regional database folder. We will reach out within 4-6 solar phases.
                                   </p>
                                   <button
@@ -1878,7 +1799,7 @@ export default function App() {
                                       setCareersApplicantCv('');
                                       setCareersApplicantCover('');
                                     }}
-                                    className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[9px] uppercase font-bold rounded"
+                                    className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-xs uppercase font-bold rounded"
                                   >
                                     Apply for another opening
                                   </button>
@@ -1896,7 +1817,7 @@ export default function App() {
                 {selectedAboutTab === 'newsroom' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Media Dispatches</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Media Dispatches</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Newsroom & Announcements</h3>
                     </div>
 
@@ -1928,7 +1849,7 @@ export default function App() {
                       }
                     ].map((article) => (
                       <div key={article.id} className="border-b border-gray-150 pb-5 pt-3 last:border-0">
-                        <span className="text-[9px] text-gray-400 font-mono block mb-1">{article.date} • Media Dispatch</span>
+                        <span className="text-xs text-gray-400 font-mono block mb-1">{article.date} • Media Dispatch</span>
                         <h4 className="font-sans font-bold text-sm text-[#2D2926] hover:text-[#E2A04F] transition-colors">
                           <button
                             onClick={() => setSelectedNewsArticleId(selectedNewsArticleId === article.id ? null : article.id)}
@@ -1937,14 +1858,14 @@ export default function App() {
                             {article.title}
                           </button>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">{article.excerpt}</p>
+                        <p className="text-[12.5px] text-gray-500 mt-2 leading-relaxed">{article.excerpt}</p>
                         
                         {selectedNewsArticleId === article.id ? (
                           <div className="mt-4 bg-[#FAF8F5] p-4 rounded border border-gray-150 text-xs text-gray-700 space-y-3 animate-slideDown">
                             <p className="leading-relaxed whitespace-pre-line font-serif">{article.content}</p>
                             <button
                               onClick={() => setSelectedNewsArticleId(null)}
-                              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-mono text-[9px] uppercase font-bold rounded cursor-pointer"
+                              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-mono text-xs uppercase font-bold rounded cursor-pointer"
                             >
                               Minimize Article
                             </button>
@@ -1952,7 +1873,7 @@ export default function App() {
                         ) : (
                           <button
                             onClick={() => setSelectedNewsArticleId(article.id)}
-                            className="text-[10px] text-[#E2A04F] font-bold hover:underline mt-2 inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-[#E2A04F] font-bold hover:underline mt-2 inline-flex items-center gap-1 cursor-pointer"
                           >
                             Read Full Press Release <ArrowRight className="w-3 h-3" />
                           </button>
@@ -1966,7 +1887,7 @@ export default function App() {
                 {selectedAboutTab === 'security' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Encrypted Trust</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Encrypted Trust</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Zero-Knowledge Ancestral Cryptography</h3>
                     </div>
 
@@ -1979,7 +1900,7 @@ export default function App() {
                         <div className="w-7 h-7 rounded-full bg-amber-50 text-[#E2A04F] flex items-center justify-center shrink-0 border border-amber-200 text-xs font-bold">1</div>
                         <div>
                           <h4 className="font-sans font-bold text-xs text-[#2D2926]">Local Safe Sandbox Caching</h4>
-                          <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                          <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                             All your recorded family files, pedigree node alterations, and elder coordinates are saved inside your individual browser's offline database storage (`localStorage`/IndexDB). This means no external server can inspect your genealogical tree unless you manually choose to export it.
                           </p>
                         </div>
@@ -1989,7 +1910,7 @@ export default function App() {
                         <div className="w-7 h-7 rounded-full bg-amber-50 text-[#E2A04F] flex items-center justify-center shrink-0 border border-amber-200 text-xs font-bold">2</div>
                         <div>
                           <h4 className="font-sans font-bold text-xs text-[#2D2926]">Acoustic High-Pass Filters</h4>
-                          <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                          <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                             When saving voice memoirs, our system localizes audio recordings, applying high-pass and low-pass noise gate filters to filter out background humming signatures. It stores clean vocal data in highly compressed web format headers.
                           </p>
                         </div>
@@ -1999,7 +1920,7 @@ export default function App() {
                         <div className="w-7 h-7 rounded-full bg-[#E2A04F]/10 text-[#E2A04F] flex items-center justify-center shrink-0 border border-[#E2A04F]/25 text-xs font-bold">3</div>
                         <div>
                           <h4 className="font-sans font-bold text-xs text-[#2D2926]">Decentralized JSON Porting</h4>
-                          <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                          <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                             Your full repository remains fully portable. When you choose to download your family's history, the generated backup file utilizes secure cryptographic encoding arrays to guarantee your history is safe.
                           </p>
                         </div>
@@ -2007,9 +1928,9 @@ export default function App() {
                     </div>
 
                     {/* Interactive Cryptography terminal scan simulation */}
-                    <div className="bg-[#1a1918] rounded-md p-4 text-[#F9F7F2] font-mono text-[10.5px] mt-6 space-y-3 border border-gray-800">
+                    <div className="bg-[#1a1918] rounded-md p-4 text-[#F9F7F2] font-mono text-xs mt-6 space-y-3 border border-gray-800">
                       <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-                        <span className="text-gray-400 text-[9px] uppercase font-sans font-bold tracking-wider">Local Crypto Module Check</span>
+                        <span className="text-gray-400 text-xs uppercase font-sans font-bold tracking-wider">Local Crypto Module Check</span>
                         <span className="w-2.5 h-2.5 rounded-full bg-[#E2A04F] animate-pulse" />
                       </div>
 
@@ -2031,7 +1952,7 @@ export default function App() {
                                 setSecurityScanState('complete');
                               }, 2505);
                             }}
-                            className="px-3.5 py-1.5 bg-[#E2A04F] hover:bg-white text-[#2D2926] font-sans font-bold uppercase tracking-wider text-[9px] rounded-xs transition-colors cursor-pointer"
+                            className="px-3.5 py-1.5 bg-[#E2A04F] hover:bg-white text-[#2D2926] font-sans font-bold uppercase tracking-wider text-xs rounded-xs transition-colors cursor-pointer"
                           >
                             Initiate Encryption Diagnostics
                           </button>
@@ -2043,7 +1964,7 @@ export default function App() {
                           {securityLogs.map((log, idx) => (
                             <p key={idx}>{log}</p>
                           ))}
-                          <p className="text-[9px] text-gray-500 italic mt-2 animate-bounce">Scanning browser memory buffers...</p>
+                          <p className="text-xs text-gray-500 italic mt-2 animate-bounce">Scanning browser memory buffers...</p>
                         </div>
                       )}
 
@@ -2055,11 +1976,11 @@ export default function App() {
                             ))}
                           </div>
                           <div className="pt-2 border-t border-gray-800 flex justify-between items-center">
-                            <span className="text-[9px] text-gray-500">Security Index: 100% Local Stewardship</span>
+                            <span className="text-xs text-gray-500">Security Index: 100% Local Stewardship</span>
                             <button
                               type="button"
                               onClick={() => setSecurityScanState('idle')}
-                              className="text-[9px] text-[#E2A04F] hover:underline"
+                              className="text-xs text-[#E2A04F] hover:underline"
                             >
                               Reset Terminal Diagnostics
                             </button>
@@ -2074,7 +1995,7 @@ export default function App() {
                 {selectedAboutTab === 'privacy' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Compliance Covenant</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Compliance Covenant</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Sovereign Steward Privacy Agreement</h3>
                     </div>
 
@@ -2102,7 +2023,7 @@ export default function App() {
                     {/* Interactive Privacy Preferences Settings Panel */}
                     <div className="border border-gray-200 p-4 rounded-sm space-y-4">
                       <h4 className="font-sans font-bold text-xs text-[#2D2926] uppercase tracking-wide">Configure Local Sandbox Privacy preferences</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
+                      <p className="text-[12.5px] text-gray-500 leading-relaxed">
                         Customize what metadata remains cached locally within your browser sandbox. Your choices are persisted immediately in your private state variables.
                       </p>
 
@@ -2110,7 +2031,7 @@ export default function App() {
                         <label className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer">
                           <div>
                             <span className="font-bold block text-gray-700">Allow Anonymous Growth Telemetry</span>
-                            <span className="text-[10px] text-gray-400 font-light">Send anonymous metadata (such as profile count) to optimize genealogical ontologies.</span>
+                            <span className="text-xs text-gray-400 font-light">Send anonymous metadata (such as profile count) to optimize genealogical ontologies.</span>
                           </div>
                           <input 
                             type="checkbox" 
@@ -2123,7 +2044,7 @@ export default function App() {
                         <label className="flex items-center justify-between p-2 rounded hover:bg-gray-50 border-t border-gray-100 cursor-pointer">
                           <div>
                             <span className="font-bold block text-gray-700">Compress Audio Recording Buffers</span>
-                            <span className="text-[10px] text-gray-400 font-light">Compacts oral wav histories to save browser space and facilitate quick offline exports.</span>
+                            <span className="text-xs text-gray-400 font-light">Compacts oral wav histories to save browser space and facilitate quick offline exports.</span>
                           </div>
                           <input 
                             type="checkbox" 
@@ -2136,7 +2057,7 @@ export default function App() {
                         <label className="flex items-center justify-between p-2 rounded hover:bg-gray-50 border-t border-gray-100 cursor-pointer">
                           <div>
                             <span className="font-bold block text-gray-700">Cache Device Session Logs locally</span>
-                            <span className="text-[10px] text-gray-400 font-light">Tracks device access time to detect unauthorized logins inside your local network.</span>
+                            <span className="text-xs text-gray-400 font-light">Tracks device access time to detect unauthorized logins inside your local network.</span>
                           </div>
                           <input 
                             type="checkbox" 
@@ -2154,13 +2075,13 @@ export default function App() {
                             setPrivacyNotification(true);
                             setTimeout(() => setPrivacyNotification(false), 3000);
                           }}
-                          className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-sans font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-semibold"
+                          className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-sans font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-semibold"
                         >
                           Save Privacy Configurations
                         </button>
 
                         {privacyNotification && (
-                          <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded animate-scaleIn">
+                          <span className="text-xs font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded animate-scaleIn">
                             ✓ Sandbox Configuration Saved!
                           </span>
                         )}
@@ -2173,7 +2094,7 @@ export default function App() {
                 {selectedAboutTab === 'guidelines' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Custodian Handbook</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Custodian Handbook</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Best Practices for Oral Interviews</h3>
                     </div>
 
@@ -2184,33 +2105,33 @@ export default function App() {
                     {/* Timeline-style guide */}
                     <div className="relative border-l border-gray-200 pl-4 space-y-5 ml-2 pt-2">
                       <div className="relative">
-                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">1</span>
+                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">1</span>
                         <h4 className="font-sans font-bold text-xs text-[#2D2926]">Preparation & Landmark Anchoring</h4>
-                        <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                           Rather than jumping straight to names, ask the elder about local landmarks—ancient streams, family compound gates, marketplace shrines. This grounds oral narratives with rich geographic metadata.
                         </p>
                       </div>
 
                       <div className="relative">
-                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">2</span>
+                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">2</span>
                         <h4 className="font-sans font-bold text-xs text-[#2D2926]">Acoustic Spoken Consent Ritual</h4>
-                        <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                          Always begin every voice file by asking the elder: *"Are you willing to speak your history for your grandchildren to listen to?"* Recording this formal consent directly onto the sound file ensures permanent ethical compliance.
+                        <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
+                          Always begin every voice file by asking the elder: <em>"Are you willing to speak your history for your grandchildren to listen to?"</em> Recording this formal consent directly onto the sound file ensures permanent ethical compliance.
                         </p>
                       </div>
 
                       <div className="relative">
-                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">3</span>
+                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">3</span>
                         <h4 className="font-sans font-bold text-xs text-[#2D2926]">Embrace Atmospheric Sound</h4>
-                        <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                           Do not worry if there are sounds of rain, chickens clucking, or wind blowing. Ambient sounds represent the physical truth of the compound environment. Do not try to aggressively filter them out.
                         </p>
                       </div>
 
                       <div className="relative">
-                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">4</span>
+                        <span className="absolute -left-[25px] top-0.5 bg-[#E2A04F] text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center border border-white">4</span>
                         <h4 className="font-sans font-bold text-xs text-[#2D2926]">Consensus Validation</h4>
-                        <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-600 mt-1 leading-relaxed">
                           Before creating a new node linking two ancestral lines, sit down with other cousins and elders to confirm the linkages. This maintains a clean, authorized genealogical truth map.
                         </p>
                       </div>
@@ -2222,14 +2143,14 @@ export default function App() {
                         <Sparkles className="w-4 h-4 text-[#E2A04F]" />
                         <h4 className="font-sans font-bold text-xs text-[#2D2926] uppercase tracking-wide">Test Your Custodian Ethos</h4>
                       </div>
-                      <p className="text-[11px] text-gray-600 leading-relaxed">
-                        Think you are ready to record? Take our quick 3-question evaluation to unlock your **Heritage Custodian Certification Stamp** inside the local browser database!
+                      <p className="text-[12.5px] text-gray-600 leading-relaxed">
+                        Think you are ready to record? Take our quick 3-question evaluation to unlock your <strong>Heritage Custodian Certification Stamp</strong> inside the local browser database!
                       </p>
 
                       <div className="space-y-3.5 text-xs">
                         <div className="space-y-1.5">
                           <p className="font-bold text-[#2D2926]">1. What is the most ethical first step before pressing the record button?</p>
-                          <div className="grid grid-cols-1 gap-2 text-[11px]">
+                          <div className="grid grid-cols-1 gap-2 text-[12.5px]">
                             <button
                               type="button"
                               onClick={() => setQuizAnswers(prev => ({ ...prev, 1: 'a' }))}
@@ -2249,7 +2170,7 @@ export default function App() {
 
                         <div className="space-y-1.5 border-t border-gray-200/60 pt-3">
                           <p className="font-bold text-[#2D2926]">2. Why are atmospheric compound sounds like rain or chickens valuable?</p>
-                          <div className="grid grid-cols-1 gap-2 text-[11px]">
+                          <div className="grid grid-cols-1 gap-2 text-[12.5px]">
                             <button
                               type="button"
                               onClick={() => setQuizAnswers(prev => ({ ...prev, 2: 'a' }))}
@@ -2269,7 +2190,7 @@ export default function App() {
 
                         <div className="space-y-1.5 border-t border-gray-200/60 pt-3">
                           <p className="font-bold text-[#2D2926]">3. Who ultimately owns the voice files and lineage data mapped on Afrolineo?</p>
-                          <div className="grid grid-cols-1 gap-2 text-[11px]">
+                          <div className="grid grid-cols-1 gap-2 text-[12.5px]">
                             <button
                               type="button"
                               onClick={() => setQuizAnswers(prev => ({ ...prev, 3: 'a' }))}
@@ -2302,7 +2223,7 @@ export default function App() {
                             if (quizAnswers[3] === 'a') score++;
                             setQuizScore(score);
                           }}
-                          className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-sans font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
+                          className="px-4 py-2 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-sans font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
                         >
                           Submit Ethos Answers
                         </button>
@@ -2327,12 +2248,12 @@ export default function App() {
                 {selectedAboutTab === 'terms' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Legal Autonomy</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Legal Autonomy</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Sovereign Ancestral Memory Pact</h3>
                     </div>
 
                     <p className="text-sm text-gray-700 leading-relaxed font-light">
-                      Unlike commercial ancestry tools that trade, index, or sell your family’s oral tapes and genealogical records, Afrolineo operates on a **strictly decentralized, zero-knowledge, client-first database sandbox**.
+                      Unlike commercial ancestry tools that trade, index, or sell your family’s oral tapes and genealogical records, Afrolineo operates on a <strong>strictly decentralized, zero-knowledge, client-first database sandbox</strong>.
                     </p>
 
                     <div className="bg-[#FAF8F5] p-5 border border-gray-150 rounded-sm space-y-3">
@@ -2350,7 +2271,7 @@ export default function App() {
                         <Check className="w-5 h-5 text-[#E2A04F]" />
                         <span className="font-sans font-bold text-xs text-[#2D2926] uppercase">Affirm the Ancestral Stewardship Pact</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 leading-normal">
+                      <p className="text-[12.5px] text-gray-500 leading-normal">
                         By checking this box, you pledge to respect living elders, record details with maximum fidelity, and preserve these records as a sacred trust for coming generations.
                       </p>
 
@@ -2358,7 +2279,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setPactSignedAuth(true)}
-                          className="w-full sm:w-auto px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                          className="w-full sm:w-auto px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                         >
                           Sign & Affirm Pact
                         </button>
@@ -2370,7 +2291,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setPactSignedAuth(false)}
-                            className="text-[10px] text-[#2D2926] hover:underline font-mono uppercase"
+                            className="text-xs text-[#2D2926] hover:underline font-mono uppercase"
                           >
                             Revoke
                           </button>
@@ -2384,7 +2305,7 @@ export default function App() {
                 {selectedAboutTab === 'social-impact' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Cultural Mission</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Cultural Mission</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Reversing the Digital Erasure of Oral Lineages</h3>
                     </div>
 
@@ -2396,22 +2317,22 @@ export default function App() {
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="bg-[#FAF8F5] border border-gray-150 p-4 rounded">
                         <strong className="block text-[#E2A04F] text-xl font-sans font-black">14,200+</strong>
-                        <span className="text-[10px] text-gray-500 font-mono">Elder Logs Saved</span>
+                        <span className="text-xs text-gray-500 font-mono">Elder Logs Saved</span>
                       </div>
                       <div className="bg-[#FAF8F5] border border-gray-150 p-4 rounded">
                         <strong className="block text-[#E2A04F] text-xl font-sans font-black">350+</strong>
-                        <span className="text-[10px] text-gray-500 font-mono">Compounds Mapped</span>
+                        <span className="text-xs text-gray-500 font-mono">Compounds Mapped</span>
                       </div>
                       <div className="bg-[#FAF8F5] border border-gray-150 p-4 rounded">
                         <strong className="block text-[#E2A04F] text-xl font-sans font-black">1.2M+</strong>
-                        <span className="text-[10px] text-gray-500 font-mono">Words Preserved</span>
+                        <span className="text-xs text-gray-500 font-mono">Words Preserved</span>
                       </div>
                     </div>
 
                     {/* Nomination Form */}
                     <div className="border border-gray-250 p-5 rounded bg-white space-y-4">
                       <h4 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Sponsor a Village Elder Compound</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
+                      <p className="text-[12.5px] text-gray-500 leading-relaxed">
                         We deploy custom micro-WiFi backup server hubs to remote West African regions. Nominate an elder compound in your family village to receive sponsored backup hardware.
                       </p>
 
@@ -2444,7 +2365,7 @@ export default function App() {
                           </div>
                           <button
                             type="submit"
-                            className="px-4.5 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-4.5 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Submit Nomination Request
                           </button>
@@ -2464,7 +2385,7 @@ export default function App() {
                               setSponsorshipCompoundAuth('');
                               setSponsorshipLGAAuth('');
                             }}
-                            className="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[9px] uppercase font-bold rounded"
+                            className="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-xs uppercase font-bold rounded"
                           >
                             Nominate another compound
                           </button>
@@ -2478,7 +2399,7 @@ export default function App() {
                 {selectedAboutTab === 'community-impact' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Local Outreach</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Local Outreach</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Afrolineo in Your Community</h3>
                     </div>
 
@@ -2489,14 +2410,14 @@ export default function App() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="border border-gray-200 p-4 rounded bg-[#FAF8F5]">
                         <strong className="block text-gray-800 text-xs">🏡 Community Archivist Toolkits</strong>
-                        <p className="text-gray-600 text-[11px] leading-relaxed mt-1">
+                        <p className="text-gray-600 text-[12.5px] leading-relaxed mt-1">
                           Get physical journals, high-sensitivity microphone adaptors, and step-by-step guideline pamphlets for your compound gathering.
                         </p>
                       </div>
 
                       <div className="border border-gray-200 p-4 rounded bg-[#FAF8F5]">
                         <strong className="block text-gray-800 text-xs">🤝 Tribal Townhalls</strong>
-                        <p className="text-gray-600 text-[11px] leading-relaxed mt-1">
+                        <p className="text-gray-600 text-[12.5px] leading-relaxed mt-1">
                           We team up with regional diaspora councils to host genealogy calibration gatherings.
                         </p>
                       </div>
@@ -2505,7 +2426,7 @@ export default function App() {
                     {/* Request Workshop Kit */}
                     <div className="border border-amber-250 bg-amber-50/15 p-5 rounded space-y-3.5">
                       <h4 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Request a Local Workshop Prep Kit</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
+                      <p className="text-[12.5px] text-gray-500 leading-relaxed">
                         Planning an upcoming family reunion? Select your date to reserve a local training session and get a physical preparation guide.
                       </p>
 
@@ -2526,7 +2447,7 @@ export default function App() {
                               }
                               setWorkshopBookedAuth(true);
                             }}
-                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer shrink-0"
+                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer shrink-0"
                           >
                             Book Workshop Date
                           </button>
@@ -2545,7 +2466,7 @@ export default function App() {
                               setWorkshopBookedAuth(false);
                               setWorkshopDateAuth('');
                             }}
-                            className="text-[10px] text-[#2D2926] hover:underline uppercase font-bold font-mono"
+                            className="text-xs text-[#2D2926] hover:underline uppercase font-bold font-mono"
                           >
                             Cancel or Reschedule
                           </button>
@@ -2559,7 +2480,7 @@ export default function App() {
                 {selectedAboutTab === 'support' && (
                   <div className="space-y-6 animate-scaleIn">
                     <div className="border-b border-gray-100 pb-4">
-                      <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Assistance Portal</span>
+                      <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Assistance Portal</span>
                       <h3 className="font-display font-black text-xl text-[#2D2926] uppercase">Custodian Help & Support Desk</h3>
                     </div>
 
@@ -2569,7 +2490,7 @@ export default function App() {
 
                     {/* Accordion FAQ */}
                     <div className="space-y-2.5">
-                      <h4 className="font-sans font-bold text-gray-800 text-[10.5px] uppercase tracking-wider">Frequently Answered Protocols:</h4>
+                      <h4 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wider">Frequently Answered Protocols:</h4>
                       
                       {[
                         { q: 'Will my records vanish if I clear my browser history?', a: 'Yes. Afrolineo operates in a zero-knowledge local sandbox. To prevent loss, open your Active Sitemap and download an offline archive (.afrolineo backup file) weekly.' },
@@ -2597,7 +2518,7 @@ export default function App() {
                     {/* Support Form */}
                     <div className="border border-gray-250 p-5 rounded bg-white space-y-4">
                       <h4 className="font-sans font-bold text-gray-800 text-xs uppercase tracking-wide">Log a Support & Diagnostic Ticket</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
+                      <p className="text-[12.5px] text-gray-500 leading-relaxed">
                         Encountered a bug or error? Submit a local assistance ticket.
                       </p>
 
@@ -2640,7 +2561,7 @@ export default function App() {
                           />
                           <button
                             type="submit"
-                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Generate Help Desk Ticket
                           </button>
@@ -2660,7 +2581,7 @@ export default function App() {
                               setSupportMessageAuth('');
                               setSupportEmailAuth('');
                             }}
-                            className="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[9px] uppercase font-bold rounded"
+                            className="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-xs uppercase font-bold rounded"
                           >
                             Submit another support ticket
                           </button>
@@ -2675,10 +2596,10 @@ export default function App() {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926] text-left">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Knowledge Hub</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Knowledge Hub</span>
                         <h3 className="font-serif font-black text-lg text-[#2D2926] uppercase">Oral Genealogy & Preservation Articles</h3>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">Curated by Academic Councils</span>
+                      <span className="text-xs text-gray-500 font-mono">Curated by Academic Councils</span>
                     </div>
 
                     {selectedArticleIdAuth ? (
@@ -2692,15 +2613,15 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setSelectedArticleIdAuth(null)}
-                              className="text-[#E2A04F] hover:underline font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer"
+                              className="text-[#E2A04F] hover:underline font-bold text-xs uppercase flex items-center gap-1 cursor-pointer"
                             >
                               ← Return to Articles Directory
                             </button>
                             <div className="bg-[#FAF8F5] border border-gray-200 p-6 rounded-md space-y-4 text-left">
                               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
-                                <span className="bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-[9px] font-bold uppercase tracking-wider">{article.category}</span>
+                                <span className="bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-xs font-bold uppercase tracking-wider">{article.category}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-gray-400 font-mono">{article.date} • {article.readTime}</span>
+                                  <span className="text-xs text-gray-400 font-mono">{article.date} • {article.readTime}</span>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2718,7 +2639,7 @@ export default function App() {
                                 </div>
                               </div>
                               <h3 className="font-serif font-black text-xl text-[#2D2926] leading-snug">{article.title}</h3>
-                              <p className="text-[10.5px] text-gray-500 font-serif italic border-l-2 border-[#E2A04F] pl-3 text-left">Written by {article.author}</p>
+                              <p className="text-xs text-gray-500 font-serif italic border-l-2 border-[#E2A04F] pl-3 text-left">Written by {article.author}</p>
                               
                               <div className="text-gray-700 leading-relaxed font-serif text-xs space-y-3.5 pt-2 whitespace-pre-line text-left">
                                 {article.content}
@@ -2764,7 +2685,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setSavedArticlesAuth([])}
-                              className="text-[9px] text-[#2D2926] underline uppercase font-bold hover:text-[#E2A04F]"
+                              className="text-xs text-[#2D2926] underline uppercase font-bold hover:text-[#E2A04F]"
                             >
                               Clear List
                             </button>
@@ -2785,7 +2706,7 @@ export default function App() {
                               <div key={art.id} className="border border-gray-200 hover:border-gray-300 p-4 rounded-md bg-[#FAF8F5] transition-all flex flex-col justify-between space-y-3 text-left">
                                 <div className="space-y-1.5">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[9px] uppercase font-mono tracking-widest text-[#E2A04F] font-bold">{art.category}</span>
+                                    <span className="text-xs uppercase font-mono tracking-widest text-[#E2A04F] font-bold">{art.category}</span>
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2802,14 +2723,14 @@ export default function App() {
                                     </button>
                                   </div>
                                   <h5 className="font-serif font-black text-sm text-gray-800 leading-snug">{art.title}</h5>
-                                  <p className="text-[11px] text-gray-600 leading-relaxed font-light">{art.excerpt}</p>
+                                  <p className="text-[12.5px] text-gray-600 leading-relaxed font-light">{art.excerpt}</p>
                                 </div>
                                 <div className="flex items-center justify-between pt-1 border-t border-gray-200/50">
-                                  <span className="text-[10px] text-gray-500 font-mono italic">By {art.author} • {art.readTime}</span>
+                                  <span className="text-xs text-gray-500 font-mono italic">By {art.author} • {art.readTime}</span>
                                   <button
                                     type="button"
                                     onClick={() => setSelectedArticleIdAuth(art.id)}
-                                    className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] text-white hover:text-[#2D2926] text-[9px] uppercase font-bold rounded transition-colors cursor-pointer"
+                                    className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] text-white hover:text-[#2D2926] text-xs uppercase font-bold rounded transition-colors cursor-pointer"
                                   >
                                     Read Full Essay →
                                   </button>
@@ -2828,10 +2749,10 @@ export default function App() {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926] text-left">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Preservation Shop</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Preservation Shop</span>
                         <h3 className="font-serif font-black text-lg text-[#2D2926] uppercase">Custom Family Heritage Artifacts</h3>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">100% of proceeds fund offline village hardware</span>
+                      <span className="text-xs text-gray-500 font-mono">100% of proceeds fund offline village hardware</span>
                     </div>
 
                     {selectedGiftIdAuth ? (
@@ -2849,7 +2770,7 @@ export default function App() {
                                 setSelectedGiftIdAuth(null);
                                 setGiftCustomizedAuth(false);
                               }}
-                              className="text-[#E2A04F] hover:underline font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer"
+                              className="text-[#E2A04F] hover:underline font-bold text-xs uppercase flex items-center gap-1 cursor-pointer"
                             >
                               ← Back to Heritage Shop Catalog
                             </button>
@@ -2861,7 +2782,7 @@ export default function App() {
                                 <div className="absolute inset-2 border border-[#E2A04F]/20 pointer-events-none rounded"></div>
                                 <div className="absolute inset-3 border border-[#E2A04F]/5 pointer-events-none rounded"></div>
                                 
-                                <span className="text-[8px] uppercase tracking-[0.25em] text-[#E2A04F] font-black font-sans">
+                                <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-black font-sans">
                                   ARCHIVAL DEMO SPECIFICATION
                                 </span>
 
@@ -2871,7 +2792,7 @@ export default function App() {
                                       <Mic className="w-6 h-6 text-[#E2A04F]" />
                                     </div>
                                     <h5 className="font-serif font-bold text-sm tracking-wide text-white">HERITAGE AUDIO CAPSULE</h5>
-                                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Laser Engraved:</p>
+                                    <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">Laser Engraved:</p>
                                     <div className="bg-[#1a1918] py-2 px-4 rounded border border-[#E2A04F]/40 inline-block font-serif font-black text-amber-100 text-xs tracking-wider italic">
                                       "{famName} Archives"
                                     </div>
@@ -2881,11 +2802,11 @@ export default function App() {
                                 {gift.id === 'gift-2' && (
                                   <div className="space-y-3">
                                     <div className="w-16 h-12 bg-transparent border-2 border-dashed border-[#E2A04F]/40 flex items-center justify-center mx-auto rounded">
-                                      <span className="text-[8px] text-gray-400 font-mono">5-Gen Blueprint</span>
+                                      <span className="text-xs text-gray-400 font-mono">5-Gen Blueprint</span>
                                     </div>
                                     <h5 className="font-serif font-black text-sm text-[#E2A04F] uppercase tracking-wider">{famName} Historical Tree</h5>
-                                    <p className="text-[10px] text-gray-300 font-sans leading-relaxed">Archival Canvas Specimen</p>
-                                    <div className="bg-[#1a1918]/60 py-1.5 px-3 rounded text-[9px] font-mono text-[#E2A04F]">
+                                    <p className="text-xs text-gray-300 font-sans leading-relaxed">Archival Canvas Specimen</p>
+                                    <div className="bg-[#1a1918]/60 py-1.5 px-3 rounded text-xs font-mono text-[#E2A04F]">
                                       TERRITORY: {regName.toUpperCase()}
                                     </div>
                                   </div>
@@ -2897,8 +2818,8 @@ export default function App() {
                                       📜
                                     </div>
                                     <h5 className="font-serif font-bold text-sm text-white">THE CUSTODIAN JOURNAL</h5>
-                                    <p className="text-[9px] text-gray-400 font-serif italic">Embossed in Gold Leaf Leather:</p>
-                                    <div className="bg-amber-950 py-1.5 px-3 rounded border border-amber-500/40 font-sans font-bold text-amber-300 text-[10px] uppercase">
+                                    <p className="text-xs text-gray-400 font-serif italic">Embossed in Gold Leaf Leather:</p>
+                                    <div className="bg-amber-950 py-1.5 px-3 rounded border border-amber-500/40 font-sans font-bold text-amber-300 text-xs uppercase">
                                       {famName} COVENANT
                                     </div>
                                   </div>
@@ -2910,28 +2831,28 @@ export default function App() {
                                       <Network className="w-6 h-6" />
                                     </div>
                                     <h5 className="font-serif font-bold text-sm text-white">VILLAGE SERVER HUB</h5>
-                                    <p className="text-[9px] text-gray-400 font-mono">STAGED HUB LOCATION:</p>
-                                    <div className="bg-emerald-950/80 py-1.5 px-3 rounded border border-emerald-500/40 font-mono font-bold text-emerald-300 text-[9px] uppercase">
+                                    <p className="text-xs text-gray-400 font-mono">STAGED HUB LOCATION:</p>
+                                    <div className="bg-emerald-950/80 py-1.5 px-3 rounded border border-emerald-500/40 font-mono font-bold text-emerald-300 text-xs uppercase">
                                       {famName} • {regName.toUpperCase()}
                                     </div>
                                   </div>
                                 )}
 
-                                <div className="text-[9px] font-mono text-gray-500 pt-2">
+                                <div className="text-xs font-mono text-gray-500 pt-2">
                                   Interactive Design Preview
                                 </div>
                               </div>
 
                               {/* Right Column: Customizer inputs */}
                               <div className="space-y-4 border border-gray-200 p-5 rounded-md bg-white">
-                                <span className="bg-amber-100 text-[#2D2926] px-2 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider">{gift.badge} Customizer</span>
+                                <span className="bg-amber-100 text-[#2D2926] px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">{gift.badge} Customizer</span>
                                 <h3 className="font-serif font-black text-base text-[#2D2926]">{gift.name}</h3>
-                                <p className="text-[11px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
+                                <p className="text-[12.5px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
                                 <span className="block text-[#E2A04F] text-base font-sans font-black">${gift.price.toFixed(2)}</span>
 
                                 <div className="space-y-3 pt-2">
                                   <div>
-                                    <label className="block text-[10px] uppercase font-sans font-bold text-gray-600 mb-1">
+                                    <label className="block text-xs uppercase font-sans font-bold text-gray-600 mb-1">
                                       Embossed Custom Family Name
                                     </label>
                                     <input
@@ -2948,7 +2869,7 @@ export default function App() {
 
                                   {(gift.id === 'gift-2' || gift.id === 'gift-4') && (
                                     <div>
-                                      <label className="block text-[10px] uppercase font-sans font-bold text-gray-600 mb-1">
+                                      <label className="block text-xs uppercase font-sans font-bold text-gray-600 mb-1">
                                         Regional Location Label
                                       </label>
                                       <input
@@ -2984,7 +2905,7 @@ export default function App() {
                                       setCustomRegionAuth('');
                                       setGiftCustomizedAuth(false);
                                     }}
-                                    className="flex-1 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-[10px] font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer text-center font-bold"
+                                    className="flex-1 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer text-center font-bold"
                                   >
                                     Stage Custom Dispatch
                                   </button>
@@ -2996,7 +2917,7 @@ export default function App() {
                                       setCustomRegionAuth('');
                                       setGiftCustomizedAuth(false);
                                     }}
-                                    className="px-4 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 text-[10px] uppercase font-bold tracking-wider rounded transition-all cursor-pointer font-bold"
+                                    className="px-4 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs uppercase font-bold tracking-wider rounded transition-all cursor-pointer font-bold"
                                   >
                                     Cancel
                                   </button>
@@ -3023,7 +2944,7 @@ export default function App() {
                                   referrerPolicy="no-referrer"
                                   className="w-full h-full object-cover"
                                 />
-                                <span className="absolute top-3 left-3 bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider">
+                                <span className="absolute top-3 left-3 bg-[#2D2926] text-white px-2 py-0.5 rounded-[3px] text-xs font-bold uppercase tracking-wider">
                                   {gift.badge}
                                 </span>
                               </div>
@@ -3034,7 +2955,7 @@ export default function App() {
                                     <span className="text-[#E2A04F] text-xs font-sans font-black">${gift.price.toFixed(2)}</span>
                                   </div>
                                   <h5 className="font-serif font-black text-sm text-gray-800 leading-snug">{gift.name}</h5>
-                                  <p className="text-[10.5px] text-gray-500 leading-relaxed font-light">{gift.description}</p>
+                                  <p className="text-xs text-gray-500 leading-relaxed font-light">{gift.description}</p>
                                 </div>
                                 <button
                                   type="button"
@@ -3043,7 +2964,7 @@ export default function App() {
                                     setCustomFamilyNameAuth('');
                                     setCustomRegionAuth('');
                                   }}
-                                  className="w-full py-2 bg-[#FAF8F5] hover:bg-[#2D2926] hover:text-white border border-[#2D2926]/30 text-[#2D2926] text-[10px] font-sans font-bold uppercase tracking-wider rounded transition-all cursor-pointer font-bold"
+                                  className="w-full py-2 bg-[#FAF8F5] hover:bg-[#2D2926] hover:text-white border border-[#2D2926]/30 text-[#2D2926] text-xs font-sans font-bold uppercase tracking-wider rounded transition-all cursor-pointer font-bold"
                                 >
                                   Configure & Preview Artifact →
                                 </button>
@@ -3058,7 +2979,7 @@ export default function App() {
                             <h5 className="font-sans font-bold text-xs uppercase text-[#2D2926] flex items-center gap-2">
                               🎁 Your Staged Dispatch Manifest ({stagedGiftsAuth.length})
                             </h5>
-                            <p className="text-[10px] text-gray-500">
+                            <p className="text-xs text-gray-500">
                               These customized items are prepared in your temporary client session buffer. To place a real order or apply village sponsorship credit vouchers, proceed to the secure gateway setup.
                             </p>
                             <div className="space-y-2.5">
@@ -3066,14 +2987,14 @@ export default function App() {
                                 <div key={item.id} className="bg-white border border-gray-150 p-3 rounded flex items-center justify-between text-xs font-sans">
                                   <div>
                                     <p className="font-bold text-gray-800">{item.originalName}</p>
-                                    <p className="text-[10px] text-[#E2A04F] font-serif italic">Custom Title: "{item.customName}" {item.customRegion ? `• Region: ${item.customRegion}` : ''}</p>
+                                    <p className="text-xs text-[#E2A04F] font-serif italic">Custom Title: "{item.customName}" {item.customRegion ? `• Region: ${item.customRegion}` : ''}</p>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <strong className="text-gray-800 font-black">${item.price.toFixed(2)}</strong>
                                     <button
                                       type="button"
                                       onClick={() => setStagedGiftsAuth(stagedGiftsAuth.filter(g => g.id !== item.id))}
-                                      className="text-red-600 hover:underline text-[9px] uppercase font-mono"
+                                      className="text-red-600 hover:underline text-xs uppercase font-mono"
                                     >
                                       Remove
                                     </button>
@@ -3099,10 +3020,10 @@ export default function App() {
                   <div className="space-y-6 animate-scaleIn text-xs text-[#2D2926] text-left">
                     <div className="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Impact Testimonials</span>
+                        <span className="text-xs uppercase tracking-wider text-[#E2A04F] font-bold block mb-1">Impact Testimonials</span>
                         <h3 className="font-serif font-black text-lg text-[#2D2926] uppercase">Custodian Success Chronicles</h3>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">Real Diaspora Breakthroughs</span>
+                      <span className="text-xs text-gray-500 font-mono">Real Diaspora Breakthroughs</span>
                     </div>
 
                     <p className="text-gray-700 leading-relaxed font-light text-xs text-left">
@@ -3116,7 +3037,7 @@ export default function App() {
                           <button
                             key={reg}
                             onClick={() => setStoryRegionFilterAuth(reg)}
-                            className={`px-3 py-1.5 rounded text-[9.5px] uppercase font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded text-xs uppercase font-bold transition-all cursor-pointer ${
                               storyRegionFilterAuth === reg ? 'bg-[#2D2926] text-[#E2A04F]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                           >
@@ -3136,17 +3057,17 @@ export default function App() {
                               <div key={story.id} className="border border-gray-200 rounded-lg p-5 bg-[#FAF8F5] text-left space-y-3.5 relative">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2.5">
                                   <div>
-                                    <span className="text-[9px] uppercase font-mono bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">{story.ethnic} ({story.region})</span>
+                                    <span className="text-xs uppercase font-mono bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">{story.ethnic} ({story.region})</span>
                                     <h5 className="font-serif font-black text-sm text-[#2D2926] mt-1">{story.name}</h5>
                                   </div>
-                                  <span className="text-[10px] font-mono font-bold text-[#E2A04F]">{story.yearsTrace}</span>
+                                  <span className="text-xs font-mono font-bold text-[#E2A04F]">{story.yearsTrace}</span>
                                 </div>
 
-                                <p className="text-[11px] text-gray-700 font-serif font-bold italic">"{story.summary}"</p>
-                                <p className="text-[11px] text-gray-600 font-light leading-relaxed font-serif whitespace-pre-line">{story.details}</p>
+                                <p className="text-[12.5px] text-gray-700 font-serif font-bold italic">"{story.summary}"</p>
+                                <p className="text-[12.5px] text-gray-600 font-light leading-relaxed font-serif whitespace-pre-line">{story.details}</p>
 
                                 <div className="bg-white border border-gray-150 p-3 rounded flex flex-col sm:flex-row items-center justify-between gap-3">
-                                  <span className="text-[10.5px] text-gray-500 font-sans">Oral Scribe: <strong>{story.speaker || 'Anonymous'}</strong></span>
+                                  <span className="text-xs text-gray-500 font-sans">Oral Scribe: <strong>{story.speaker || 'Anonymous'}</strong></span>
                                   
                                   {/* Simulated Interactive Audio tape playing with visual wave bar pulsing */}
                                   <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -3178,7 +3099,7 @@ export default function App() {
                                           }, 20000);
                                         }
                                       }}
-                                      className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-[#2D2926] text-white text-[9px] uppercase font-bold tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer font-sans"
+                                      className="px-3 py-1.5 bg-[#2D2926] hover:bg-[#E2A04F] hover:text-[#2D2926] text-white text-xs uppercase font-bold tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer font-sans"
                                     >
                                       {isPlaying ? <Pause className="w-3 h-3 inline" /> : <Play className="w-3 h-3 inline font-bold" />}
                                       {isPlaying ? 'Pause tape' : `Hear Oral clip (${story.audioDuration || 'Demo'})`}
@@ -3193,7 +3114,7 @@ export default function App() {
                       {/* Submission form for user stories */}
                       <div className="border border-gray-250 p-5 rounded bg-white space-y-4 text-left">
                         <h4 className="font-sans font-bold text-[#2D2926] text-xs uppercase tracking-wide">Publish Your Family Breakthrough Story</h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">
+                        <p className="text-[12.5px] text-gray-500 leading-relaxed">
                           Did you trace a long-lost ancestor, record a poignant oral audio capsule, or find your village ancestral compound? Tell other custodians what you accomplished!
                         </p>
                         <form
@@ -3251,7 +3172,7 @@ export default function App() {
                           />
                           <button
                             type="submit"
-                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                            className="px-5 py-2.5 bg-[#2D2926] hover:bg-[#E2A04F] text-[#F9F7F2] hover:text-[#2D2926] text-xs font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                           >
                             Submit Breakthrough Story
                           </button>
@@ -3284,14 +3205,14 @@ export default function App() {
               <p className="text-xs text-gray-400 leading-relaxed font-serif italic max-w-sm">
                 Preserving oral history, sovereign lineages, and localized cultural geography across ancestral compounds.
               </p>
-              <div className="text-[10px] text-gray-500 font-mono">
+              <div className="text-xs text-gray-500 font-mono">
                 Platform Local Time: 2026 • Live Heritage Node
               </div>
             </div>
 
             {/* Explore Section */}
             <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Explore</h4>
+              <h4 className="text-[12.5px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Explore</h4>
               <ul className="space-y-2 text-xs">
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('articles'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Articles</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSitemapModal(true); }} className="text-gray-400 hover:text-white transition-colors font-semibold text-[#E2A04F]">Sitemap</a></li>
@@ -3302,7 +3223,7 @@ export default function App() {
 
             {/* About Section */}
             <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">About</h4>
+              <h4 className="text-[12.5px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">About</h4>
               <ul className="space-y-2 text-xs">
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('dei'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Diversity, Equity, and Inclusion</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('careers'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Careers</a></li>
@@ -3315,7 +3236,7 @@ export default function App() {
 
             {/* Terms & Support Section */}
             <div className="md:col-span-3 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Terms & Support</h4>
+              <h4 className="text-[12.5px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Terms & Support</h4>
               <ul className="space-y-2 text-xs">
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('terms'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Terms</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('social-impact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Social Impact</a></li>
@@ -3326,7 +3247,7 @@ export default function App() {
 
             {/* Social Section */}
             <div className="md:col-span-2 space-y-3">
-              <h4 className="text-[11px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Social</h4>
+              <h4 className="text-[12.5px] uppercase tracking-widest font-bold text-[#E2A04F] font-sans">Social</h4>
               <ul className="space-y-2 text-xs">
                 <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">Twitter</a></li>
                 <li><a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 hover:text-white transition-colors">Instagram</a></li>
@@ -3341,7 +3262,7 @@ export default function App() {
           {/* Bottom attribution copyright bar */}
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
             <p>© 2026 Afrolineo Community Heritage Vault. Trace Your Land, Live Your Story.</p>
-            <p className="text-[10px] text-gray-600 font-mono">
+            <p className="text-xs text-gray-600 font-mono">
               Built for preserving oral history and localized cultural geography.
             </p>
           </div>
@@ -3349,165 +3270,199 @@ export default function App() {
       </footer>
       </div>
 
-      {/* DRAWER: Detail Profile Sidebar Slideout Drawer Panel */}
-      {selectedProfile && (
-        <div id="profile-detail-drawer" className="fixed inset-0 z-50 flex justify-end" style={{ contentVisibility: 'auto' }}>
-          <div className="fixed inset-0 bg-[#1a1918]/60 backdrop-blur-xs transition-opacity" onClick={() => setSelectedProfile(null)} />
-          
-          <div className="relative w-full max-w-md bg-[#F9F7F2] h-full flex flex-col justify-between shadow-2xl z-10 animate-slideLeft border-l border-[#2D2926]/20">
-            {/* Header detail */}
-            <div className="bg-[#1a1918] text-[#fcfbfa] p-5 flex justify-between items-center shrink-0 border-b border-gray-800">
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full ${selectedProfile.avatarColor} text-xs font-bold font-mono flex items-center justify-center border border-gray-700`}>
-                  {selectedProfile.fullName[0].toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-display font-medium text-sm truncate max-w-[200px] text-white">{selectedProfile.fullName}</h3>
-                  <span className="text-[9px] uppercase font-sans tracking-wider text-[#E2A04F] bg-[#E2A04F]/10 px-1.5 py-0.5 rounded-sm font-semibold">
-                    Relationship: {selectedProfile.role.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-              
-              <button
-                id="close-drawer-btn"
-                onClick={() => setSelectedProfile(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Person details panel */}
+      {selectedProfile && !showForm && !showRecordingStudio && (() => {
+        const person = selectedProfile;
+        // "Grandmother Nneka" stays whole; "Zainab Okeke" becomes "Zainab"
+        const cleanName = person.fullName.replace(/\(.*?\)/g, '').trim();
+        const startsWithTitle = /^(grand(mother|father|ma|pa)|chief|papa|mama|baba|iya|mr|mrs|dr|alhaji|alhaja|prince|princess|oba|uncle|aunt(ie)?)\b/i.test(cleanName);
+        const firstName = startsWithTitle ? cleanName : cleanName.split(' ')[0];
+        const stories = recordings.filter((r) => r.profileId === person.id);
+        const isUnset = (v?: string) => !v || v === 'Unspecified';
+        const facts: { label: string; value?: string }[] = [
+          { label: 'Family compound', value: person.familyCompound },
+          { label: 'Hometown / LGA', value: person.lga },
+          { label: 'Ward', value: person.ward },
+          { label: 'Language', value: person.language },
+          { label: 'Born', value: person.birthYear },
+          { label: 'Birthplace', value: person.birthPlace },
+        ];
+        const formatDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        const closePanel = () => {
+          stopStoryAudio();
+          setSelectedProfile(null);
+        };
 
-            {/* Detail Content Body Scroll */}
-            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6">
-              
-              {/* Localized Geographical Tag Chips */}
-              <div className="space-y-3">
-                <span className="text-[9px] font-sans uppercase tracking-[0.18em] text-[#2D2926]/50 block font-bold">
-                  Geographical Drill-down Metadata:
+        return (
+          <div
+            id="profile-detail-drawer"
+            className="fixed inset-0 z-50 flex justify-end"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closePanel();
+            }}
+          >
+            <div className="fixed inset-0 bg-ink/50 backdrop-blur-[2px] animate-fadeIn" onClick={closePanel} aria-hidden="true" />
+
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="profile-drawer-name"
+              className="relative w-full sm:max-w-[440px] bg-cream h-full flex flex-col shadow-[0_0_60px_-10px_rgba(31,27,23,0.5)] animate-slideLeft"
+            >
+              {/* Header */}
+              <div className="px-6 pt-6 pb-5 flex items-start gap-4 shrink-0">
+                <span className={`shrink-0 w-15 h-15 rounded-full font-bold text-lg flex items-center justify-center ${SIDE_STYLES[ROLE_INFO[person.role].side]}`}>
+                  {initials(person.fullName)}
                 </span>
-                
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-white border border-[#2D2926]/12 rounded-sm p-3 flex flex-col bg-opacity-70">
-                    <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans font-bold tracking-wider">Family Compound</span>
-                    <span className="font-serif font-semibold text-[#2D2926] mt-1 truncate">{selectedProfile.familyCompound}</span>
-                  </div>
-                  <div className="bg-white border border-[#2D2926]/12 rounded-sm p-3 flex flex-col bg-opacity-70">
-                    <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans font-bold tracking-wider">Primary Dialect</span>
-                    <span className="font-serif font-semibold text-emerald-950 mt-1 truncate">{selectedProfile.language}</span>
-                  </div>
-                  <div className="bg-white border border-[#2D2926]/12 rounded-sm p-3 flex flex-col bg-opacity-70">
-                    <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans font-bold tracking-wider">Local Gov (LGA)</span>
-                    <span className="font-serif font-semibold text-amber-950 mt-1 truncate">{selectedProfile.lga}</span>
-                  </div>
-                  <div className="bg-white border border-[#2D2926]/12 rounded-sm p-3 flex flex-col bg-opacity-70">
-                    <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans font-bold tracking-wider">Political Ward</span>
-                    <span className="font-serif font-semibold text-[#2D2926] mt-1 truncate">{selectedProfile.ward}</span>
-                  </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h2 id="profile-drawer-name" className="font-display font-medium text-[26px] leading-tight tracking-[-0.01em]">
+                    {person.fullName}
+                  </h2>
+                  <p className="mt-0.5 text-[15px] text-muted">
+                    {RELATION_PHRASE[person.role]}
+                    {person.role !== 'self' && <> · {person.isAlive ? 'Living' : 'Passed on'}</>}
+                  </p>
                 </div>
-
-                <div className="bg-white border border-[#2D2926]/12 rounded-sm p-3 text-xs bg-opacity-70 flex justify-between items-center mt-2.5">
-                  <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans font-semibold tracking-wide">Lineage Branch Size</span>
-                  <span className="font-mono bg-[#E2A04F]/10 text-[#2D2926] border border-[#E2A04F]/15 font-bold px-2 py-0.5 rounded-sm">
-                    ~ {selectedProfile.familySizeEstimate || 30} Kin members
-                  </span>
-                </div>
+                <button
+                  id="close-drawer-btn"
+                  type="button"
+                  onClick={closePanel}
+                  aria-label="Close"
+                  autoFocus
+                  className="shrink-0 -mr-2 -mt-1 w-11 h-11 rounded-full text-muted hover:text-ink hover:bg-sand flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Biography Notes */}
-              <div className="space-y-1 bg-white p-4.5 rounded-sm border border-[#2D2926]/12 relative">
-                <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans block font-bold tracking-widest">Biography Notes:</span>
-                <p className="text-xs text-[#2D2926]/85 leading-relaxed pt-1.5 whitespace-pre-line font-serif italic">
-                  "{selectedProfile.notes || 'No biographical annotations recorded.'}"
-                </p>
-              </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-7">
+                <button
+                  id="record-new-story-drawer-btn"
+                  type="button"
+                  onClick={() => {
+                    stopStoryAudio();
+                    setShowRecordingStudio(true);
+                  }}
+                  className="w-full h-13 rounded-2xl bg-ochre hover:brightness-95 text-ink font-semibold text-base flex items-center justify-center gap-2.5 cursor-pointer"
+                >
+                  <Mic className="w-5 h-5" aria-hidden="true" />
+                  {person.role === 'self' ? 'Record your own story' : `Record a story with ${firstName}`}
+                </button>
 
-              {/* Story/Recordings matching this profile */}
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-sans uppercase tracking-[0.18em] text-[#2D2926]/50 font-bold">
-                    Oral Story Archives
-                  </span>
-                  <button
-                    id="record-new-story-drawer-btn"
-                    onClick={() => {
-                      setShowRecordingStudio(true);
-                      setSelectedProfile(selectedProfile);
-                    }}
-                    className="text-[9px] uppercase tracking-wider bg-[#2D2926] text-[#F9F7F2] hover:bg-[#E2A04F] hover:text-[#2D2926] px-3 py-1.5 rounded-sm flex items-center gap-1 font-bold transition-all cursor-pointer font-sans"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Record Elder Voice
-                  </button>
-                </div>
-
-                {recordings.filter(r => r.profileId === selectedProfile.id).length === 0 ? (
-                  /* Story Gap alert PM spec requirement! */
-                  <div className="bg-[#FAF8F5] border border-dashed border-[#2D2926]/15 p-5 rounded-sm text-center">
-                    <ShieldAlert className="w-4 h-4 text-[#E2A04F] mx-auto mb-1.5" />
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-[#2D2926] font-sans">No Stories Recorded: Active Story Gap</p>
-                    <p className="text-[10px] text-[#2D2926]/60 mt-1 leading-relaxed font-serif">
-                      <em>"What is one wisdom your lineage must remember?"</em> Put down our heritage records immediately while elders are with us.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                    {recordings.filter(r => r.profileId === selectedProfile.id).map(r => (
-                      <div key={r.id} className="bg-white border border-[#2D2926]/15 rounded-sm p-4 space-y-2 border-l-2 border-l-[#E2A04F]">
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-xs font-serif font-bold text-[#2D2926] truncate max-w-[170px]">{r.title}</h4>
-                          <span className="font-sans text-[8px] uppercase tracking-wider bg-[#2D2926]/5 text-[#2D2926]/60 px-1.5 py-0.5 rounded-sm font-semibold">
-                            {r.recordedAt}
-                          </span>
-                        </div>
-
-                        <p className="text-[10px] text-[#2D2926]/80 line-clamp-3 bg-[#FAF8F5] p-2.5 rounded-sm leading-relaxed border border-[#2D2926]/5 font-serif">
-                          "{r.transcript}"
-                        </p>
-
-                        <div className="flex justify-between items-center text-[10px] pt-1 font-sans">
-                          <span className="text-[#2D2926]/50 font-mono text-[9px]">Length: {Math.floor(r.durationSec / 60)}m {r.durationSec % 60}s</span>
-                          {r.summary && (
-                            <span className="truncate max-w-[150px] font-bold text-[#E2A04F] bg-[#E2A04F]/10 border border-[#E2A04F]/15 px-1.5 rounded-sm text-[9px]">
-                              #{r.summary.split(',')[0]}
-                            </span>
-                          )}
-                        </div>
+                {/* Details */}
+                <section aria-labelledby="profile-details-heading">
+                  <h3 id="profile-details-heading" className="font-sans text-base font-bold mb-3">Details</h3>
+                  <dl className="grid grid-cols-2 gap-px bg-line rounded-2xl overflow-hidden border border-line">
+                    {facts.map((f) => (
+                      <div key={f.label} className="bg-white px-4 py-3">
+                        <dt className="text-[13px] text-muted">{f.label}</dt>
+                        <dd className={`mt-0.5 font-semibold text-[15px] break-words ${isUnset(f.value) ? 'text-[#9A8F82] font-normal' : ''}`}>
+                          {isUnset(f.value) ? 'Not added' : f.value}
+                        </dd>
                       </div>
                     ))}
-                  </div>
+                  </dl>
+                </section>
+
+                {/* Notes */}
+                {person.notes && person.notes.trim() && (
+                  <section aria-labelledby="profile-notes-heading">
+                    <h3 id="profile-notes-heading" className="font-sans text-base font-bold mb-2">About {firstName}</h3>
+                    <p className="font-display text-[17px] leading-relaxed text-ink-soft whitespace-pre-line">{person.notes}</p>
+                  </section>
                 )}
+
+                {/* Stories */}
+                <section aria-labelledby="profile-stories-heading">
+                  <div className="flex items-baseline justify-between mb-3">
+                    <h3 id="profile-stories-heading" className="font-sans text-base font-bold">Stories</h3>
+                    {stories.length > 0 && <span className="text-sm text-muted">{stories.length}</span>}
+                  </div>
+
+                  {stories.length === 0 ? (
+                    <div className="rounded-2xl border-[1.5px] border-dashed border-line-strong p-5 text-center">
+                      <p className="font-semibold">No stories yet</p>
+                      <p className="mt-1 text-sm text-muted">A good first question to ask:</p>
+                      <p className="mt-2 font-display italic text-[17px] text-ink-soft">“What is one thing you want your grandchildren to remember?”</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {stories.map((r) => {
+                        const isPlaying = playingStoryId === r.id;
+                        return (
+                          <li key={r.id} className="bg-white border border-line rounded-2xl p-3.5">
+                            <div className="flex items-center gap-3">
+                              {r.audioBase64 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStoryAudio(r)}
+                                  aria-label={`${isPlaying ? 'Pause' : 'Play'} ${r.title}`}
+                                  className="shrink-0 w-11 h-11 rounded-full bg-ink text-cream flex items-center justify-center cursor-pointer hover:bg-ink-soft"
+                                >
+                                  {isPlaying ? <Pause className="w-[18px] h-[18px] fill-current" /> : <Play className="w-[18px] h-[18px] fill-current ml-0.5" />}
+                                </button>
+                              ) : (
+                                <span className="shrink-0 w-11 h-11 rounded-full bg-sand text-ink-soft flex items-center justify-center" title="Transcript only">
+                                  <FileText className="w-[18px] h-[18px]" aria-hidden="true" />
+                                </span>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-[15px] leading-snug">{r.title}</p>
+                                <p className="text-[13px] text-muted">
+                                  {formatDuration(r.durationSec)} · {r.recordedAt}
+                                  {!r.audioBase64 && ' · transcript only'}
+                                </p>
+                              </div>
+                            </div>
+                            {r.transcript && (
+                              <details className="group mt-2.5">
+                                <summary className="list-none cursor-pointer text-sm font-semibold text-ochre-deep hover:underline underline-offset-4">
+                                  <span className="group-open:hidden">Read transcript</span>
+                                  <span className="hidden group-open:inline">Hide transcript</span>
+                                </summary>
+                                <p className="mt-2 font-display text-[15.5px] leading-relaxed text-ink-soft whitespace-pre-line">{r.transcript}</p>
+                              </details>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
               </div>
 
-            </div>
-
-            {/* Core Action Footer inside Drawer */}
-            <div className="bg-white border-t border-[#2D2926]/10 p-4 shrink-0 flex gap-2">
-              <button
-                id="edit-profile-drawer-btn"
-                onClick={() => {
-                  setShowForm(true);
-                }}
-                className="flex-1 text-[10px] uppercase font-bold tracking-widest py-3 border border-[#2D2926]/20 bg-[#FAF8F5] hover:bg-white text-[#2D2926] transition-all rounded-sm cursor-pointer"
-              >
-                Modify Metadata
-              </button>
-              
-              {selectedProfile.role !== 'self' && (
+              {/* Footer */}
+              <div className="border-t border-line px-6 py-4 flex gap-2.5 shrink-0 bg-cream">
                 <button
-                  id="delete-profile-drawer-btn"
-                  onClick={() => handleDeleteProfile(selectedProfile.id)}
-                  className="p-3 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
-                  title="Purge Node From Genealogy Map"
+                  id="edit-profile-drawer-btn"
+                  type="button"
+                  onClick={() => {
+                    stopStoryAudio();
+                    setShowForm(true);
+                  }}
+                  className="flex-1 h-12 rounded-xl border-[1.5px] border-[#CFC4B4] bg-white font-semibold hover:border-ink cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
+                  Edit details
                 </button>
-              )}
-            </div>
-
+                {person.role !== 'self' && (
+                  <button
+                    id="delete-profile-drawer-btn"
+                    type="button"
+                    onClick={() => handleDeleteProfile(person.id)}
+                    aria-label={`Remove ${person.fullName} from tree`}
+                    title="Remove from tree"
+                    className="w-12 h-12 rounded-xl border-[1.5px] border-line text-muted hover:text-record hover:border-record/40 hover:bg-[#FDECEA] flex items-center justify-center cursor-pointer"
+                  >
+                    <Trash2 className="w-[18px] h-[18px]" />
+                  </button>
+                )}
+              </div>
+            </aside>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* DOCK / FORM MODALS */}
       {showForm && (
@@ -3558,20 +3513,20 @@ export default function App() {
 
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans tracking-wider font-bold block">Method 1: File Transfer</span>
+                <span className="text-xs text-[#2D2926]/50 uppercase font-sans tracking-wider font-bold block">Method 1: File Transfer</span>
                 
                 <button
                   id="export-database-binary-btn"
                   onClick={triggerExportDatabase}
-                  className="w-full py-2.5 px-4 bg-[#2D2926] text-[#F9F7F2] hover:bg-[#E2A04F] hover:text-[#2D2926] text-[10px] font-bold uppercase tracking-widest rounded-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                  className="w-full py-2.5 px-4 bg-[#2D2926] text-[#F9F7F2] hover:bg-[#E2A04F] hover:text-[#2D2926] text-xs font-bold uppercase tracking-widest rounded-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Download Heritage Backup (.afrolineo)
                 </button>
 
                 <div className="border border-dashed border-[#2D2926]/12 p-3 rounded-sm flex flex-col items-center justify-center bg-white bg-opacity-40">
-                  <span className="text-[9px] text-[#2D2926]/50 uppercase font-sans tracking-wider font-bold mb-1.5">Import Backup File</span>
-                  <label className="px-4 py-1.5 bg-[#FAF8F5] border border-[#2D2926]/15 hover:border-[#E2A04F] rounded-sm text-[10px] font-bold uppercase tracking-wider text-[#2D2926] cursor-pointer shadow-xs transition-[#FAF8F5]">
+                  <span className="text-xs text-[#2D2926]/50 uppercase font-sans tracking-wider font-bold mb-1.5">Import Backup File</span>
+                  <label className="px-4 py-1.5 bg-[#FAF8F5] border border-[#2D2926]/15 hover:border-[#E2A04F] rounded-sm text-xs font-bold uppercase tracking-wider text-[#2D2926] cursor-pointer shadow-xs transition-[#FAF8F5]">
                     Upload Backup File
                     <input
                       type="file"
@@ -3586,28 +3541,28 @@ export default function App() {
               {/* Robust Iframe Sandbox Copy/Paste fallback section */}
               <div className="border-t border-[#2D2926]/12 pt-3 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-[#E2A04F] uppercase font-sans tracking-wider font-bold">
+                  <span className="text-xs text-[#E2A04F] uppercase font-sans tracking-wider font-bold">
                     Method 2: Copy & Paste Fallback
                   </span>
                   <button
                     onClick={() => setShowRawTextFallback(!showRawTextFallback)}
-                    className="text-[9px] uppercase tracking-wider text-[#2D2926]/60 hover:text-[#2D2926] font-bold underline transition-colors cursor-pointer"
+                    className="text-xs uppercase tracking-wider text-[#2D2926]/60 hover:text-[#2D2926] font-bold underline transition-colors cursor-pointer"
                   >
                     {showRawTextFallback ? 'Hide' : 'Show Manual Clipboard Tools'}
                   </button>
                 </div>
 
-                <p className="text-[10px] text-[#2D2926]/60 font-serif leading-normal italic">
+                <p className="text-xs text-[#2D2926]/60 font-serif leading-normal italic">
                   Note: If downloading fails inside the browser preview frame due to security sandbox restrictions, use these tools to securely backup or restore your data!
                 </p>
 
                 {showRawTextFallback && (
                   <div className="space-y-3 p-3 bg-white/70 border border-[#2D2926]/10 rounded-sm animate-slideDown">
                     <div>
-                      <span className="text-[8px] text-gray-400 uppercase tracking-wider font-bold block mb-1">Backup Data Code</span>
+                      <span className="text-xs text-gray-400 uppercase tracking-wider font-bold block mb-1">Backup Data Code</span>
                       <button
                         onClick={handleCopyRawBackup}
-                        className={`w-full py-2 px-3 text-[10px] rounded-sm font-sans uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        className={`w-full py-2 px-3 text-xs rounded-sm font-sans uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           copySuccess 
                             ? 'bg-emerald-600 text-white' 
                             : 'bg-[#2D2926]/5 hover:bg-[#2D2926]/10 text-[#2D2926]'
@@ -3616,25 +3571,25 @@ export default function App() {
                         {copySuccess ? <Check className="w-3.5 h-3.5 animate-pulse" /> : <Copy className="w-3.5 h-3.5" />}
                         {copySuccess ? 'Copied Custom Archive!' : 'Copy Raw Backup to Clipboard'}
                       </button>
-                      <span className="text-[8.5px] text-gray-400 block mt-1 leading-normal italic">
+                      <span className="text-xs text-gray-400 block mt-1 leading-normal italic">
                         Clicking this copies your raw lineage and transcript records. Paste it into any text file (.txt/.json) on your computer to save!
                       </span>
                     </div>
 
                     <div className="border-t border-gray-150 pt-2.5">
-                      <span className="text-[8px] text-gray-400 uppercase tracking-wider font-bold block mb-1">Restore from Raw Text</span>
+                      <span className="text-xs text-gray-400 uppercase tracking-wider font-bold block mb-1">Restore from Raw Text</span>
                       <textarea
                         rows={3}
                         placeholder='Paste your raw .afrolineo backup JSON string here...'
                         value={manualBackupInput}
                         onChange={(e) => setManualBackupInput(e.target.value)}
-                        className="w-full text-[10px] p-2 bg-gray-50 border border-gray-250 rounded shadow-inner font-mono focus:outline-none focus:border-[#E2A04F]"
+                        className="w-full text-xs p-2 bg-gray-50 border border-gray-250 rounded shadow-inner font-mono focus:outline-none focus:border-[#E2A04F]"
                       />
                       <button
                         type="button"
                         onClick={handleRestoreFromText}
                         disabled={!manualBackupInput.trim()}
-                        className="w-full mt-1.5 py-1.5 px-3 bg-[#E2A04F]/90 hover:bg-[#E2A04F] disabled:bg-gray-200 disabled:text-gray-400 text-black text-[9px] font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                        className="w-full mt-1.5 py-1.5 px-3 bg-[#E2A04F]/90 hover:bg-[#E2A04F] disabled:bg-gray-200 disabled:text-gray-400 text-black text-xs font-sans font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
                       >
                         Restore From Text Paste
                       </button>
@@ -3669,12 +3624,12 @@ export default function App() {
               <div className="bg-[#E2A04F]/10 border border-[#E2A04F]/20 p-5 rounded-sm text-center text-xs space-y-1 text-[#2D2926]">
                 <Check className="w-6 h-6 text-emerald-800 mx-auto" />
                 <p className="font-serif font-bold">Feedback Cataloged Successfully.</p>
-                <p className="text-[10px] text-[#2D2926]/60">Thank you for helping us iterate Afrolineo!</p>
+                <p className="text-xs text-[#2D2926]/60">Thank you for helping us iterate Afrolineo!</p>
               </div>
             ) : (
               <form onSubmit={handleSendPMFeedback} className="space-y-4">
                 <div>
-                  <label className="block text-[9px] uppercase font-sans tracking-widest text-[#2D2926]/50 mb-1.5 font-bold">
+                  <label className="block text-xs uppercase font-sans tracking-widest text-[#2D2926]/50 mb-1.5 font-bold">
                     What is the most critical feature missing right now?
                   </label>
                   <textarea
@@ -3688,7 +3643,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 text-[10px] font-sans tracking-wider uppercase font-bold">
+                <div className="flex justify-end gap-2 text-xs font-sans tracking-wider uppercase font-bold">
                   <button
                     type="button"
                     onClick={() => setShowFeedbackModal(false)}
@@ -3720,7 +3675,7 @@ export default function App() {
                 <Network className="w-6 h-6 text-[#E2A04F]" />
                 <div>
                   <h3 className="font-display font-bold text-lg uppercase tracking-wider text-white">Afrolineo Active Sitemap</h3>
-                  <p className="text-[10px] text-gray-400 font-sans tracking-normal leading-normal">
+                  <p className="text-xs text-gray-400 font-sans tracking-normal leading-normal">
                     Interactive portal mapper offering single-click shortcuts to all pedigree screens and localized heritage tools.
                   </p>
                 </div>
@@ -3760,7 +3715,7 @@ export default function App() {
                     <Globe className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">Core Navigation</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Direct access links to our decentralized physical mapping hubs and oral vaults.
                   </p>
                   
@@ -3787,7 +3742,7 @@ export default function App() {
                             {item.icon}
                             {item.label}
                           </span>
-                          <span className="text-[9px] uppercase font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-400 group-hover:text-[#E2A04F]">
+                          <span className="text-xs uppercase font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-400 group-hover:text-[#E2A04F]">
                             {activeScreen === item.key ? 'Current' : 'Jump'}
                           </span>
                         </button>
@@ -3802,7 +3757,7 @@ export default function App() {
                     <Settings className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">Active Custodian Tools</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Actionable sub-modules for recording lineage voices and downloading credentials.
                   </p>
 
@@ -3868,7 +3823,7 @@ export default function App() {
                             {item.icon}
                             {item.label}
                           </span>
-                          <span className={`text-[9px] uppercase font-mono px-1.5 py-0.5 rounded border ${item.badgeClass}`}>
+                          <span className={`text-xs uppercase font-mono px-1.5 py-0.5 rounded border ${item.badgeClass}`}>
                             {item.badge}
                           </span>
                         </button>
@@ -3883,7 +3838,7 @@ export default function App() {
                     <FolderHeart className="w-4 h-4 text-[#E2A04F]" />
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#2D2926] font-sans">About Directory</h4>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-[12.5px] text-gray-500 leading-relaxed font-serif italic">
                     Administrative credentials, public guidelines, and platform newsrooms.
                   </p>
 
@@ -3911,7 +3866,7 @@ export default function App() {
                         className="text-left text-xs p-2 bg-white border border-gray-150 hover:border-[#E2A04F] rounded-sm text-gray-700 hover:text-[#2D2926] transition-colors flex justify-between items-center cursor-pointer"
                       >
                         <span>{item.label}</span>
-                        <span className="text-[8px] uppercase font-mono text-gray-400">{item.badge}</span>
+                        <span className="text-xs uppercase font-mono text-gray-400">{item.badge}</span>
                       </button>
                     ))}
                   </div>
@@ -3922,15 +3877,15 @@ export default function App() {
               {/* Quick stats panel */}
               <div className="bg-[#FAF8F5] border border-[#2D2926]/10 p-4 rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div>
-                  <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold font-sans block">Total Profiles Mapped</span>
+                  <span className="text-xs uppercase tracking-wider text-gray-400 font-bold font-sans block">Total Profiles Mapped</span>
                   <p className="text-xl font-serif font-black text-[#2D2926] mt-0.5">{profiles.length}</p>
                 </div>
                 <div className="border-l border-gray-200">
-                  <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold font-sans block">Voice Recordings Captured</span>
+                  <span className="text-xs uppercase tracking-wider text-gray-400 font-bold font-sans block">Voice Recordings Captured</span>
                   <p className="text-xl font-serif font-black text-[#2D2926] mt-0.5">{recordings.length}</p>
                 </div>
                 <div className="border-l border-gray-200">
-                  <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold font-sans block">Backup Status</span>
+                  <span className="text-xs uppercase tracking-wider text-gray-400 font-bold font-sans block">Backup Status</span>
                   <p className="text-xl font-serif font-black text-emerald-850 mt-0.5 flex items-center justify-center gap-1">
                     {hasExportedData ? (
                       <>
@@ -3942,7 +3897,7 @@ export default function App() {
                   </p>
                 </div>
                 <div className="border-l border-gray-200">
-                  <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold font-sans block">Active Local Logins</span>
+                  <span className="text-xs uppercase tracking-wider text-gray-400 font-bold font-sans block">Active Local Logins</span>
                   <p className="text-xl font-serif font-black text-[#2D2926] mt-0.5">{loginSessions.filter(s => s.status === 'Active').length}</p>
                 </div>
               </div>

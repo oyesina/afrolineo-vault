@@ -322,7 +322,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
           <Mic className="w-5 h-5 text-red-500 animate-pulse" />
           <div>
             <h3 className="font-display font-semibold text-base leading-tight">Oral History Recording Studio</h3>
-            <p className="text-[10px] text-gray-400 font-sans uppercase tracking-wider">
+            <p className="text-xs text-gray-400 font-sans uppercase tracking-wider">
               Capturing memory for: <span className="text-amber-400 font-bold">{profile.fullName}</span>
             </p>
           </div>
@@ -340,7 +340,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
       <div className="p-6 space-y-6">
         {/* Prompt starter card deck */}
         <div className="bg-[#faf9f6] border border-[#f0eee9] p-4 rounded-xl relative shadow-sm">
-          <div className="flex justify-between items-center mb-2 text-[10px] text-gray-400 font-mono tracking-widest uppercase">
+          <div className="flex justify-between items-center mb-2 text-xs text-gray-400 font-mono tracking-widest uppercase">
             <span className="flex items-center gap-1">
               <HelpCircle className="w-3.5 h-3.5" />
               Conversation Starter Prompt
@@ -401,13 +401,13 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 </button>
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-800">Press to Begin Voice Recording</p>
-                  <p className="text-[10px] text-gray-500 mt-1">Make sure you are in a quiet room with the elder speaker.</p>
+                  <p className="text-xs text-gray-500 mt-1">Make sure you are in a quiet room with the elder speaker.</p>
                 </div>
               </div>
 
               <div className="w-full flex items-center gap-2 py-1">
                 <div className="h-px bg-gray-200 flex-1" />
-                <span className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">OR</span>
+                <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">OR</span>
                 <div className="h-px bg-gray-200 flex-1" />
               </div>
 
@@ -421,10 +421,10 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                   <span className="text-xs font-bold text-gray-700 group-hover:text-amber-900">
                     Upload Audio from Relative
                   </span>
-                  <span className="text-[10px] text-gray-400 mt-1">
+                  <span className="text-xs text-gray-400 mt-1">
                     Drag and drop or click to browse
                   </span>
-                  <p className="text-[9px] text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Supports MP3, WAV, M4A, WEBM, OGG (Max 25MB)
                   </p>
                   <input
@@ -455,7 +455,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 <p className="font-mono text-xl font-bold tracking-widest text-[#1a1918]">
                   {formatTimer(recordTime)}
                 </p>
-                <p className="text-[10px] text-red-650 uppercase font-semibold tracking-wider mt-1 animate-pulse">
+                <p className="text-xs text-red-650 uppercase font-semibold tracking-wider mt-1 animate-pulse">
                   Now Capturing Oral Heritage...
                 </p>
               </div>
@@ -550,7 +550,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 <Loader2 className="w-7 h-7 animate-spin text-amber-600" />
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-800">Processing Audio with Server-Side Gemini...</p>
-                  <p className="text-[10px] text-gray-500 mt-1">Transcribing native accents, identifying compound origins, and compiling structural notes.</p>
+                  <p className="text-xs text-gray-500 mt-1">Transcribing native accents, identifying compound origins, and compiling structural notes.</p>
                 </div>
               </div>
             )}
@@ -562,7 +562,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                     <Sparkles className="w-3.5 h-3.5" />
                     Gemini AI Oral Transcript
                   </span>
-                  <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-medium">
+                  <span className="text-xs bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-medium">
                     Translation Complete
                   </span>
                 </div>
@@ -575,9 +575,9 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
 
                 {summaryText && (
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#f0eee9]">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Suggested Tags:</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Suggested Tags:</span>
                     {summaryText.split(',').map((tag, i) => (
-                      <span key={i} className="text-[10px] bg-[#1a1918] text-[#fcfbfa] px-2 py-0.5 rounded-full font-medium">
+                      <span key={i} className="text-xs bg-[#1a1918] text-[#fcfbfa] px-2 py-0.5 rounded-full font-medium">
                         #{tag.trim()}
                       </span>
                     ))}
