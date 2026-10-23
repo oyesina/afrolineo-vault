@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Admin analytics data (users and events)
+/data/

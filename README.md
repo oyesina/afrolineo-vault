@@ -259,3 +259,16 @@ Data Sovereignty is central to African genealogy research. Consequently, Afrolin
 
 ---
 *Built with ❤️ for the preservation of Sovereign African Legacies.*
+
+---
+
+## Admin console
+
+A password-protected dashboard at **`/admin`** shows how people use Afrolineo: growth, activation funnel, weekly retention, feature usage, audience, and a searchable user list with each person's activity and tree outline.
+
+**Setup**
+1. Set `ADMIN_PASSWORD` on the server (see `.env.example`). The console stays disabled while it is unset.
+2. Optionally set `ANALYTICS_DIR` to a folder on a persistent disk. The default is `./data`, which hosts like Cloud Run wipe on every redeploy.
+3. Restart the server and open `/admin`.
+
+**What is collected** (see `server/analytics.ts`): account details (name, email, sign-in method, onboarding answers), activity events (sign-ins, screens, people added, stories recorded and their length, playback, links, exports), and an outline of each tree (names, relationships, living status). Recordings, transcripts and notes are never sent.
