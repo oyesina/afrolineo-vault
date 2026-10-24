@@ -272,3 +272,5 @@ A password-protected dashboard at **`/admin`** shows how people use Afrolineo: g
 3. Restart the server and open `/admin`.
 
 **What is collected** (see `server/analytics.ts`): account details (name, email, sign-in method, onboarding answers), activity events (sign-ins, screens, people added, stories recorded and their length, playback, links, exports), and an outline of each tree (names, relationships, living status). Recordings, transcripts and notes are never sent.
+
+**Consent:** every visitor sees a cookie notice (`src/components/CookieConsent.tsx`). Nothing is sent to the admin console until they choose "Accept all" or switch on Analytics, and browsers sending Global Privacy Control start with analytics off. The dashboard therefore only counts people who opted in. If what you collect changes, bump `CONSENT_VERSION` in `src/lib/consent.ts` so everyone is asked again.

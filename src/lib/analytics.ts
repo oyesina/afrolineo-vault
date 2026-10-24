@@ -1,9 +1,11 @@
 /**
  * Sends usage events to the server for the admin console.
  * Never send story content (transcripts, notes, audio) through here.
+ * Nothing is sent unless the visitor has allowed analytics (see consent.ts).
  * Failures are ignored: analytics must never break the app.
  */
 import type { Profile } from '../types';
+import { hasAnalyticsConsent } from './consent';
 
 export type TrackEvent =
   | 'landing_viewed'
@@ -80,6 +82,7 @@ export async function identify(user: {
   knowledgeLevel?: string;
 }) {
   userEmail = user.email;
+  if (!hasAnalyticsConsent()) return;
   await post('/api/track/identify', {
     email: user.email,
     name: user.name,
@@ -93,6 +96,7 @@ export async function identify(user: {
 }
 
 export function track(name: TrackEvent, props: Props = {}) {
+  if (!hasAnalyticsConsent()) return;
   const clean: Record<string, string | number | boolean> = {};
   for (const [k, v] of Object.entries(props)) if (v !== undefined) clean[k] = v;
   post('/api/track', { name, anonId: anonId(), userEmail, device: device(), props: clean });
@@ -101,10 +105,11 @@ export function track(name: TrackEvent, props: Props = {}) {
 let treeTimer: ReturnType<typeof setTimeout> | null = null;
 /** Send the tree outline (names and relationships only), at most once every 2 seconds. */
 export function syncTreeOutline(profiles: Profile[]) {
-  if (!userEmail) return;
+  if (!userEmail || !hasAnalyticsConsent()) return;
   const email = userEmail;
   if (treeTimer) clearTimeout(treeTimer);
   treeTimer = setTimeout(() => {
+    if (!hasAnalyticsConsent()) return;
     post('/api/track/tree', {
       email,
       tree: profiles.map((p) => ({
