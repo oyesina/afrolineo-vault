@@ -10,6 +10,8 @@ import OriginsProfileForm from './components/OriginsProfileForm';
 import RecordingStudio from './components/RecordingStudio';
 import LineageMark from './components/LineageMark';
 import { identify, setAnalyticsUser, syncTreeOutline, track } from './lib/analytics';
+import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from './lib/consent';
+import CookieConsent from './components/CookieConsent';
 import DiscoveryHub from './components/DiscoveryHub';
 import UserLoginGate from './components/UserLoginGate';
 import CommunityVault from './components/CommunityVault';
@@ -660,16 +662,19 @@ export default function App() {
     }, 2000);
   };
 
-  // ---- Usage analytics for the admin console ----
+  // ---- Usage analytics for the admin console (only with consent) ----
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(hasAnalyticsConsent());
+  useEffect(() => onConsentChange((c) => setAnalyticsAllowed(c?.analytics === true)), []);
+
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !analyticsAllowed) return;
     // Re-identify each session so accounts created before tracking existed are known
     identify(currentUser).then(() => {
       track('session_started');
       syncTreeOutline(profiles);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.email]);
+  }, [currentUser?.email, analyticsAllowed]);
 
   useEffect(() => {
     if (currentUser) track('screen_viewed', { screen: activeScreen });
@@ -747,6 +752,15 @@ export default function App() {
             <Download className="w-5 h-5 shrink-0" aria-hidden="true" />
             {!isSidebarCollapsed && <span>Back up &amp; export</span>}
           </button>
+          {!isSidebarCollapsed && (
+            <button
+              type="button"
+              onClick={openCookieSettings}
+              className="self-start px-3.5 text-[13px] text-muted hover:text-ink underline-offset-4 hover:underline cursor-pointer"
+            >
+              Cookie settings
+            </button>
+          )}
 
           {currentUser && (
             <div className={`flex items-center gap-3 rounded-2xl bg-cream border border-line ${isSidebarCollapsed ? 'flex-col p-2' : 'p-3'}`}>
@@ -826,6 +840,9 @@ export default function App() {
           );
         })}
       </nav>
+
+      {/* Cookie notice sits above the phone bottom bar */}
+      <CookieConsent bottomOffsetClass="bottom-16 md:bottom-0" />
 
       {/* RIGHT SIDE MAIN WRAPPER CONTAINER */}
       <div className="flex-1 flex flex-col overflow-y-auto min-h-screen">
@@ -3284,6 +3301,7 @@ export default function App() {
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('social-impact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Social Impact</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('community-impact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Afrolineo in your Community</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Support</a></li>
+                <li><button type="button" onClick={openCookieSettings} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Cookie settings</button></li>
               </ul>
             </div>
 

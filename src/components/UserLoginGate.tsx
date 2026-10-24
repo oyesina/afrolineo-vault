@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import LineageMark from './LineageMark';
 import { track } from '../lib/analytics';
+import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from '../lib/consent';
+import CookieConsent from './CookieConsent';
 
 import { ARTICLES, GIFTS, STORIES } from '../data/exploreData';
 
@@ -180,7 +182,7 @@ const PRIVACY_POINTS = [
   { icon: ShieldCheck, title: 'You choose who connects', body: 'Other families only see a match if you both agree to link.' },
 ];
 
-const FOOTER_LINKS: { label: string; tab?: string }[] = [
+const FOOTER_LINKS: { label: string; tab?: string; cookies?: boolean }[] = [
   { label: 'Articles', tab: 'articles' },
   { label: 'Family stories', tab: 'customer-stories' },
   { label: 'Gifts', tab: 'gifts' },
@@ -188,6 +190,7 @@ const FOOTER_LINKS: { label: string; tab?: string }[] = [
   { label: 'Terms', tab: 'terms' },
   { label: 'Help', tab: 'support' },
   { label: 'All pages' },
+  { label: 'Cookie settings', cookies: true },
 ];
 
 function PreviewAvatar({ initials, dashed, size = 'md', className = '' }: { initials?: string; dashed?: boolean; size?: 'md' | 'lg'; className?: string }) {
@@ -374,9 +377,16 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [isLoginWindowOpen, showOAuthPopup]);
 
-  // Count each landing page visit once per page load
+  // Count each landing page visit once per page load, as soon as analytics is allowed
   useEffect(() => {
-    track('landing_viewed', { referrer: document.referrer ? new URL(document.referrer).hostname : 'direct' });
+    let counted = false;
+    const countVisit = () => {
+      if (counted || !hasAnalyticsConsent()) return;
+      counted = true;
+      track('landing_viewed', { referrer: document.referrer ? new URL(document.referrer).hostname : 'direct' });
+    };
+    countVisit();
+    return onConsentChange(countVisit);
   }, []);
 
   const openSignIn = () => {
@@ -703,7 +713,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 <button
                   key={link.label}
                   type="button"
-                  onClick={() => (link.tab ? setActiveAboutTabLanding(link.tab) : setShowSitemapLanding(true))}
+                  onClick={() => (link.cookies ? openCookieSettings() : link.tab ? setActiveAboutTabLanding(link.tab) : setShowSitemapLanding(true))}
                   className="text-muted hover:text-ink underline-offset-4 hover:underline cursor-pointer"
                 >
                   {link.label}
@@ -2470,6 +2480,8 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
           </div>
         </div>
       )}
+
+      <CookieConsent />
     </div>
   );
 }

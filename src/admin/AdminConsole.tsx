@@ -710,7 +710,7 @@ export default function AdminConsole() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-[30px] font-medium leading-tight">{tab === 'overview' ? 'How people use Afrolineo' : 'Users'}</h1>
-            <p className="text-muted">{tab === 'overview' ? 'Growth, activation, retention and engagement.' : 'Every account, what they’ve done and how recently.'}</p>
+            <p className="text-muted">{tab === 'overview' ? 'Growth, activation, retention and engagement.' : 'Every account, what they’ve done and how recently.'} Only people who allowed analytics in the cookie notice are counted.</p>
           </div>
           {tab === 'overview' && (
             <div role="group" aria-label="Date range" className="flex bg-sand rounded-xl p-1">
