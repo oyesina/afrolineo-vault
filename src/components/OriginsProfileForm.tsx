@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Profile, ProfileRole } from '../types';
 import { X, Globe, Home, Users, MapPin, Sparkles, Languages } from 'lucide-react';
+import { useI18n } from '../i18n';
+import type { MessageKey } from '../i18n/locales/en';
+
+const ROLE_OPTIONS: ProfileRole[] = ['self', 'father', 'mother', 'paternal_grandfather', 'paternal_grandmother', 'maternal_grandfather', 'maternal_grandmother', 'sibling', 'uncle', 'aunt'];
 
 interface OriginsFormProps {
   onSubmit: (profile: Omit<Profile, 'id' | 'avatarColor'> & { id?: string }) => void;
@@ -22,6 +26,7 @@ const POPULAR_LANGUAGES = [
 ];
 
 export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile, fixedRole }: OriginsFormProps) {
+  const { t } = useI18n();
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [role, setRole] = useState<ProfileRole>('self');
@@ -103,13 +108,14 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-amber-400" />
           <h3 className="font-display font-semibold text-lg">
-            {initialProfile ? `Modify Origins Profile: ${initialProfile.fullName}` : `Establish Lineage Linkage`}
+            {initialProfile ? t('form.editTitle', { name: initialProfile.fullName }) : t('form.addTitle')}
           </h3>
         </div>
         <button
           id="close-form-btn"
           type="button"
           onClick={onCancel}
+          aria-label={t('common.close')}
           className="text-gray-400 hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
@@ -118,21 +124,20 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
 
       <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
         <p className="text-xs text-gray-500 leading-relaxed border-b border-gray-100 pb-3">
-          Establishing a profile here links ancestral names directly with their real-world 
-          <strong> Ancestral Compound</strong>, <strong>Ward</strong>, and <strong>LGA</strong>, transforming oral histories into physical geographic mapping coordinate keys.
+          {t('form.lead')}
         </p>
 
         {/* Core Personal Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Full / Ancestral Name
+              {t('form.name')}
             </label>
             <input
               id="input-fullname"
               type="text"
               required
-              placeholder="e.g. Joseph Babajide Oyewole"
+              placeholder={t('form.namePlaceholder')}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-gray-50/50"
@@ -141,7 +146,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Relationship / Role
+              {t('form.relationship')}
             </label>
             <select
               id="select-role"
@@ -150,16 +155,9 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
               onChange={(e) => setRole(e.target.value as ProfileRole)}
               className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-gray-50/50 disabled:bg-gray-100 disabled:text-gray-500"
             >
-              <option value="self">Self (Anchor Point)</option>
-              <option value="father">Father</option>
-              <option value="mother">Mother</option>
-              <option value="paternal_grandfather">Paternal Grandfather</option>
-              <option value="paternal_grandmother">Paternal Grandmother</option>
-              <option value="maternal_grandfather">Maternal Grandfather</option>
-              <option value="maternal_grandmother">Maternal Grandmother</option>
-              <option value="sibling">Sibling</option>
-              <option value="uncle">Extended Lineage: Uncle</option>
-              <option value="aunt">Extended Lineage: Aunt</option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>{t(`form.role.${r}` as MessageKey)}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -167,7 +165,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Biological Gender
+              {t('form.gender')}
             </label>
             <div className="flex gap-2">
               {(['Male', 'Female'] as const).map((g) => (
@@ -182,7 +180,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {g}
+                  {g === 'Male' ? t('form.male') : t('form.female')}
                 </button>
               ))}
             </div>
@@ -190,12 +188,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Estimated Birth Year
+              {t('form.birthYear')}
             </label>
             <input
               id="input-birthyear"
               type="text"
-              placeholder="e.g. 1954 or 1930s"
+              placeholder={t('form.birthYearPlaceholder')}
               value={birthYear}
               onChange={(e) => setBirthYear(e.target.value)}
               className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-gray-50/50"
@@ -204,7 +202,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Life Status
+              {t('form.status')}
             </label>
             <div className="flex gap-2">
               <button
@@ -217,7 +215,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                Living
+                {t('form.living')}
               </button>
               <button
                 id="btn-status-ancestor"
@@ -229,7 +227,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                Ancestor
+                {t('form.passedOn')}
               </button>
             </div>
           </div>
@@ -240,7 +238,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
           <div className="flex items-center gap-2 text-amber-800 border-b border-amber-150 pb-2 mb-2">
             <Home className="w-4 h-4" />
             <h4 className="font-display font-medium text-xs uppercase tracking-wider">
-              Cultural & Localized Geography Profile
+              {t('form.placeSection')}
             </h4>
           </div>
 
@@ -249,18 +247,18 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             <div>
               <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 <Home className="w-3.5 h-3.5 text-gray-400" />
-                Ancestral Family Compound
+                {t('form.compound')}
               </label>
               <input
                 id="input-compound"
                 type="text"
-                placeholder="e.g. Alao Royal Palace, Ile-Oluji"
+                placeholder={t('form.compoundPlaceholder')}
                 value={familyCompound}
                 onChange={(e) => setFamilyCompound(e.target.value)}
                 className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white"
               />
               <span className="text-xs text-gray-400 mt-1 block">
-                The granular extended household fortress name.
+                {t('form.compoundHint')}
               </span>
             </div>
 
@@ -268,12 +266,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             <div className="relative">
               <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 <Languages className="w-3.5 h-3.5 text-gray-400" />
-                Mother Tongue / Primary Dialect
+                {t('form.language')}
               </label>
               <input
                 id="input-language"
                 type="text"
-                placeholder="e.g. Yoruba (Ijebu), Asante Twi"
+                placeholder={t('form.languagePlaceholder')}
                 value={language}
                 onChange={(e) => {
                   setLanguage(e.target.value);
@@ -315,12 +313,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             <div className="relative">
               <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                Local Gov. Area (LGA) or District
+                {t('form.lga')}
               </label>
               <input
                 id="input-lga"
                 type="text"
-                placeholder="e.g. Ibadan North, Kumasi Metro"
+                placeholder={t('form.lgaPlaceholder')}
                 value={lga}
                 onChange={(e) => {
                   setLga(e.target.value);
@@ -355,7 +353,7 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
                 />
               )}
               <span className="text-xs text-gray-400 mt-1 block">
-                Ensures local administrative lookup matching.
+                {t('form.lgaHint')}
               </span>
             </div>
 
@@ -363,12 +361,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             <div>
               <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 <Globe className="w-3.5 h-3.5 text-gray-400" />
-                Ward or Community Division
+                {t('form.ward')}
               </label>
               <input
                 id="input-ward"
                 type="text"
-                placeholder="e.g. Ward 03 (Sabo), Otolo Ward"
+                placeholder={t('form.wardPlaceholder')}
                 value={ward}
                 onChange={(e) => setWard(e.target.value)}
                 className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white"
@@ -381,10 +379,10 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             <div className="flex justify-between items-center text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-gray-400" />
-                Estimated Branch Lineage Size
+                {t('form.familySize')}
               </span>
               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-mono text-xs">
-                {familySizeEstimate} + Kin
+                {t('form.familySizeValue', { count: familySizeEstimate })}
               </span>
             </div>
             <input
@@ -398,8 +396,8 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
               className="w-full accent-amber-600 cursor-pointer"
             />
             <div className="flex justify-between text-xs text-gray-400 mt-1 font-mono">
-              <span>Small family (5+)</span>
-              <span>Extended clan (250+)</span>
+              <span>{t('form.familySmall')}</span>
+              <span>{t('form.familyLarge')}</span>
             </div>
           </div>
         </div>
@@ -408,12 +406,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
         <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Specific Place of Birth
+              {t('form.birthplace')}
             </label>
             <input
               id="input-birthplace"
               type="text"
-              placeholder="e.g. Ibadan General Hospital, Oyo State"
+              placeholder={t('form.birthplacePlaceholder')}
               value={birthPlace}
               onChange={(e) => setBirthPlace(e.target.value)}
               className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-gray-50/50"
@@ -422,12 +420,12 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Cultural Biography Notes
+              {t('form.notes')}
             </label>
             <textarea
               id="textarea-notes"
               rows={3}
-              placeholder="Record known accolades, titles, migration routes, family recipes, or traditional crafts they excelled at..."
+              placeholder={t('form.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-gray-50/50"
@@ -443,14 +441,14 @@ export default function OriginsProfileForm({ onSubmit, onCancel, initialProfile,
             onClick={onCancel}
             className="text-xs px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-55 font-medium transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             id="save-profile-btn"
             type="submit"
             className="text-xs px-5 py-2.5 bg-[#1a1918] text-white rounded-lg hover:bg-amber-65 font-medium transition-colors cursor-pointer shadow-sm hover:shadow"
           >
-            {initialProfile ? 'Save Changes' : 'Secure & Add to Lineage'}
+            {initialProfile ? t('form.save') : t('form.add')}
           </button>
         </div>
       </form>

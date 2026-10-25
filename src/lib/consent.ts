@@ -79,16 +79,20 @@ export function onOpenCookieSettings(fn: () => void) {
   return () => window.removeEventListener(OPEN_EVENT, fn);
 }
 
-/** What the app keeps in the browser, shown in the preferences window. */
+/**
+ * What the app keeps in the browser, shown in the preferences window.
+ * `purpose` (and `label` where the name isn't a storage key) are text keys in i18n/locales/en.ts.
+ */
 export const STORAGE_INVENTORY = {
   essential: [
-    { name: 'afrolineo_auth_user', purpose: 'Keeps you signed in on this device.' },
-    { name: 'afrolineo_profiles, afrolineo_recordings, afrolineo_linked_relatives', purpose: 'Your family tree, stories and linked relatives. Stored only in this browser.' },
-    { name: 'afrolineo_login_sessions, afrolineo_has_exported, afrolineo_sidebar_collapsed', purpose: 'Remembers recent sign-ins on this device, whether you have made a backup, and your menu layout.' },
-    { name: 'afrolineo_consent', purpose: 'Remembers the choices you make here.' },
+    { name: 'afrolineo_auth_user', purpose: 'cookies.item.auth' },
+    { name: 'afrolineo_profiles, afrolineo_recordings, afrolineo_linked_relatives', purpose: 'cookies.item.archive' },
+    { name: 'afrolineo_login_sessions, afrolineo_has_exported, afrolineo_sidebar_collapsed', purpose: 'cookies.item.misc' },
+    { name: 'afrolineo_language, afrolineo_language_note_dismissed', purpose: 'cookies.item.language' },
+    { name: 'afrolineo_consent', purpose: 'cookies.item.consent' },
   ],
   analytics: [
-    { name: 'afrolineo_anon_id', purpose: 'A random ID that links visits from this browser before and after you sign in.' },
-    { name: 'Usage sent to our server', purpose: 'Your account details, which features you use, and an outline of your tree (names and relationships). Never your recordings, transcripts or notes.' },
+    { name: 'afrolineo_anon_id', purpose: 'cookies.item.anonId' },
+    { name: 'cookies.item.server', label: true, purpose: 'cookies.item.serverBody' },
   ],
-};
+} as const;

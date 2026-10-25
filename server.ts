@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { mountAnalytics } from "./server/analytics";
+import { mountLocale } from "./server/locale";
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ app.use(express.json({ limit: "25mb" }));
 
 // Usage analytics + password-protected admin API (see server/analytics.ts)
 mountAnalytics(app);
+
+// Visitor country for choosing a display language (see server/locale.ts)
+mountLocale(app);
 
 // Initialize Google Gemini Client securely if key exists
 const apiKey = process.env.GEMINI_API_KEY;
