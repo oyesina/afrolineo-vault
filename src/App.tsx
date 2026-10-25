@@ -5,13 +5,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Profile, OralHistory, ProfileRole, LinkedRelative, LoginSession } from './types';
-import FamilyTree, { RELATION_PHRASE, ROLE_INFO, SIDE_STYLES, initials } from './components/FamilyTree';
+import FamilyTree, { ROLE_INFO, SIDE_STYLES, initials, roleKeys } from './components/FamilyTree';
 import OriginsProfileForm from './components/OriginsProfileForm';
 import RecordingStudio from './components/RecordingStudio';
 import LineageMark from './components/LineageMark';
 import { identify, setAnalyticsUser, syncTreeOutline, track } from './lib/analytics';
 import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from './lib/consent';
 import CookieConsent from './components/CookieConsent';
+import LanguageSwitcher, { LanguageAutoNote } from './components/LanguageSwitcher';
+import { useI18n } from './i18n';
+import type { MessageKey } from './i18n/locales/en';
 import DiscoveryHub from './components/DiscoveryHub';
 import UserLoginGate from './components/UserLoginGate';
 import CommunityVault from './components/CommunityVault';
@@ -152,15 +155,16 @@ const DEFAULT_RECORDINGS: OralHistory[] = [
 
 type AppScreen = 'tree' | 'discovery' | 'community' | 'dash' | 'about';
 
-const APP_NAV: { id: string; screen: AppScreen; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }> }[] = [
-  { id: 'sidebar-nav-tree-btn', screen: 'tree', label: 'Family tree', shortLabel: 'Tree', icon: LineageMark },
-  { id: 'sidebar-nav-discovery-btn', screen: 'discovery', label: 'Discover', shortLabel: 'Discover', icon: Globe },
-  { id: 'sidebar-nav-community-btn', screen: 'community', label: 'Relatives', shortLabel: 'Relatives', icon: Users },
+const APP_NAV: { id: string; screen: AppScreen; label: MessageKey; shortLabel: MessageKey; icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }> }[] = [
+  { id: 'sidebar-nav-tree-btn', screen: 'tree', label: 'nav.tree', shortLabel: 'nav.treeShort', icon: LineageMark },
+  { id: 'sidebar-nav-discovery-btn', screen: 'discovery', label: 'nav.discover', shortLabel: 'nav.discover', icon: Globe },
+  { id: 'sidebar-nav-community-btn', screen: 'community', label: 'nav.relatives', shortLabel: 'nav.relatives', icon: Users },
   // Founder metrics moved to the admin console at /admin
-  { id: 'sidebar-nav-about-btn', screen: 'about', label: 'About', shortLabel: 'About', icon: HelpCircle },
+  { id: 'sidebar-nav-about-btn', screen: 'about', label: 'nav.about', shortLabel: 'nav.about', icon: HelpCircle },
 ];
 
 export default function App() {
+  const { t, tc } = useI18n();
   const [currentUser, setCurrentUser] = useState<{ 
     email: string; 
     name: string; 
@@ -702,7 +706,7 @@ export default function App() {
           id="sidebar-collapse-toggle"
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           className="absolute top-6 -right-3 w-6 h-6 rounded-full bg-white border border-line text-ink-soft hover:text-ink flex items-center justify-center cursor-pointer shadow-sm z-40"
-          aria-label={isSidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
+          aria-label={isSidebarCollapsed ? t('nav.expand') : t('nav.collapse')}
         >
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -727,13 +731,13 @@ export default function App() {
                     if (screen === 'about') setSelectedAboutTab('dei');
                   }}
                   aria-current={active ? 'page' : undefined}
-                  title={isSidebarCollapsed ? label : undefined}
+                  title={isSidebarCollapsed ? t(label) : undefined}
                   className={`flex items-center gap-3 rounded-xl text-[15px] transition-colors cursor-pointer ${
                     isSidebarCollapsed ? 'justify-center w-12 h-12 mx-auto' : 'px-3.5 py-3 text-left'
                   } ${active ? 'bg-white text-ink font-semibold shadow-[0_1px_2px_rgba(60,40,15,0.08)]' : 'text-ink-soft font-medium hover:bg-white/60'}`}
                 >
                   <Icon className={`w-5 h-5 shrink-0 ${active ? 'text-[#9A5B14]' : ''}`} aria-hidden="true" />
-                  {!isSidebarCollapsed && <span>{label}</span>}
+                  {!isSidebarCollapsed && <span>{t(label)}</span>}
                 </button>
               );
             })}
@@ -744,13 +748,13 @@ export default function App() {
           <button
             id="sidebar-io-btn"
             onClick={() => setShowImportExport(true)}
-            title={isSidebarCollapsed ? 'Back up & export' : undefined}
+            title={isSidebarCollapsed ? t('nav.backup') : undefined}
             className={`flex items-center gap-3 rounded-xl text-[15px] font-medium text-ink-soft hover:bg-white/60 cursor-pointer ${
               isSidebarCollapsed ? 'justify-center w-12 h-12 mx-auto' : 'px-3.5 py-3'
             }`}
           >
             <Download className="w-5 h-5 shrink-0" aria-hidden="true" />
-            {!isSidebarCollapsed && <span>Back up &amp; export</span>}
+            {!isSidebarCollapsed && <span>{t('nav.backup')}</span>}
           </button>
           {!isSidebarCollapsed && (
             <button
@@ -758,9 +762,12 @@ export default function App() {
               onClick={openCookieSettings}
               className="self-start px-3.5 text-[13px] text-muted hover:text-ink underline-offset-4 hover:underline cursor-pointer"
             >
-              Cookie settings
+              {t('nav.cookies')}
             </button>
           )}
+          <div className={isSidebarCollapsed ? 'mx-auto' : ''}>
+            <LanguageSwitcher compact={isSidebarCollapsed} align="left" direction="up" />
+          </div>
 
           {currentUser && (
             <div className={`flex items-center gap-3 rounded-2xl bg-cream border border-line ${isSidebarCollapsed ? 'flex-col p-2' : 'p-3'}`}>
@@ -779,8 +786,8 @@ export default function App() {
               <button
                 id="sidebar-logout-btn"
                 onClick={handleLogout}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={t('nav.signOut')}
+                title={t('nav.signOut')}
                 className="w-10 h-10 rounded-lg text-muted hover:text-record hover:bg-white flex items-center justify-center cursor-pointer shrink-0"
               >
                 <LogOut className="w-[18px] h-[18px]" />
@@ -800,10 +807,11 @@ export default function App() {
             <span className="font-display text-xl font-semibold tracking-tight">Afrolineo</span>
           </div>
           <div className="flex items-center gap-1">
+            <LanguageSwitcher compact />
             <button
               id="mobile-nav-io-btn"
               onClick={() => setShowImportExport(true)}
-              aria-label="Back up and export"
+              aria-label={t('nav.backup')}
               className="w-11 h-11 rounded-xl text-ink-soft hover:bg-sand flex items-center justify-center cursor-pointer"
             >
               <Download className="w-5 h-5" />
@@ -811,7 +819,7 @@ export default function App() {
             <button
               id="mobile-logout-btn"
               onClick={handleLogout}
-              aria-label="Sign out"
+              aria-label={t('nav.signOut')}
               className="w-11 h-11 rounded-xl text-ink-soft hover:bg-sand flex items-center justify-center cursor-pointer"
             >
               <LogOut className="w-5 h-5" />
@@ -835,7 +843,7 @@ export default function App() {
               className={`h-16 flex flex-col items-center justify-center gap-1 text-xs cursor-pointer ${active ? 'text-ink font-bold' : 'text-muted font-medium'}`}
             >
               <Icon className={`w-[22px] h-[22px] ${active ? 'text-[#9A5B14]' : ''}`} aria-hidden="true" />
-              {shortLabel}
+              {t(shortLabel)}
             </button>
           );
         })}
@@ -846,15 +854,16 @@ export default function App() {
 
       {/* RIGHT SIDE MAIN WRAPPER CONTAINER */}
       <div className="flex-1 flex flex-col overflow-y-auto min-h-screen">
+        <LanguageAutoNote />
         {/* Main Core Body Container */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:py-8">
           
           {/* Metric widgets row summary (top visual) */}
-          <section id="metric-top-bar" aria-label="Archive summary" className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <section id="metric-top-bar" aria-label={t('stats.people')} className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
             {[
-              { label: 'People', value: profiles.length, icon: FolderHeart, tint: 'bg-ochre-tint text-paternal-ink' },
-              { label: 'Minutes recorded', value: totalMinutesRecorded, icon: Mic, tint: 'bg-ochre-tint text-paternal-ink' },
-              { label: 'Full profiles', value: deepProfilesCount, icon: Sparkles, tint: 'bg-forest-tint text-forest' },
+              { label: t('stats.people'), value: profiles.length, icon: FolderHeart, tint: 'bg-ochre-tint text-paternal-ink' },
+              { label: t('stats.minutes'), value: totalMinutesRecorded, icon: Mic, tint: 'bg-ochre-tint text-paternal-ink' },
+              { label: t('stats.fullProfiles'), value: deepProfilesCount, icon: Sparkles, tint: 'bg-forest-tint text-forest' },
             ].map(({ label, value, icon: Icon, tint }) => (
               <div key={label} className="bg-white border border-line rounded-2xl p-3 sm:p-5 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -870,15 +879,9 @@ export default function App() {
 
           {/* 1. Main SCREEN: Lineage tree */}
         {activeScreen === 'tree' && (() => {
-          const coreRoles: { role: ProfileRole; label: string }[] = [
-            { role: 'self', label: 'yourself' },
-            { role: 'father', label: 'your father' },
-            { role: 'mother', label: 'your mother' },
-            { role: 'paternal_grandfather', label: 'your father’s father' },
-            { role: 'paternal_grandmother', label: 'your father’s mother' },
-            { role: 'maternal_grandfather', label: 'your mother’s father' },
-            { role: 'maternal_grandmother', label: 'your mother’s mother' },
-          ];
+          const coreRoles: { role: ProfileRole; label: string }[] = (
+            ['self', 'father', 'mother', 'paternal_grandfather', 'paternal_grandmother', 'maternal_grandfather', 'maternal_grandmother'] as const
+          ).map((role) => ({ role, label: t(`tree.who.${role}` as MessageKey) }));
           const missing = coreRoles.filter(({ role }) => !profiles.some((p) => p.role === role));
           const filled = coreRoles.length - missing.length;
           const familyAnchor = profiles.find((p) => p.role === 'father') || profiles.find((p) => p.role === 'self');
@@ -900,10 +903,10 @@ export default function App() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <h1 className="font-display font-medium text-[28px] sm:text-[34px] leading-tight tracking-[-0.02em]">
-                  {familyName ? `${familyName} family` : 'Your family tree'}
+                  {familyName ? t('tree.familyTitle', { name: familyName }) : t('tree.yourTree')}
                 </h1>
                 <p className="mt-1 text-muted">
-                  {profiles.length} {profiles.length === 1 ? 'person' : 'people'} · {generations} {generations === 1 ? 'generation' : 'generations'} · {recordings.length} {recordings.length === 1 ? 'story' : 'stories'} recorded
+                  {tc('tree.people', profiles.length)} · {tc('tree.generations', generations)} · {tc('tree.storiesRecorded', recordings.length)}
                 </p>
               </div>
               <div className="flex gap-2.5 w-full sm:w-auto">
@@ -917,7 +920,7 @@ export default function App() {
                     className="flex-1 sm:flex-none h-11.5 inline-flex items-center justify-center gap-2 px-4 rounded-xl border-[1.5px] border-[#CFC4B4] bg-white font-semibold hover:border-ink cursor-pointer whitespace-nowrap"
                   >
                     <Mic className="w-[18px] h-[18px] text-record" aria-hidden="true" />
-                    Record a story
+                    {t('tree.recordStory')}
                   </button>
                 )}
                 <button
@@ -930,7 +933,7 @@ export default function App() {
                   className="flex-1 sm:flex-none h-11.5 inline-flex items-center justify-center gap-2 px-4 sm:px-5 rounded-xl bg-ochre font-semibold text-ink hover:brightness-95 cursor-pointer whitespace-nowrap"
                 >
                   <Plus className="w-[18px] h-[18px]" aria-hidden="true" />
-                  Add relative
+                  {t('tree.addRelative')}
                 </button>
               </div>
             </div>
@@ -943,16 +946,16 @@ export default function App() {
                 </span>
                 <div className="flex-[1_1_260px] min-w-0">
                   <p className="font-semibold">
-                    {missing.length > 0 ? `Next step: add ${missing[0].label}` : `Next step: record ${unrecordedElder!.fullName}`}
+                    {missing.length > 0 ? t('tree.next.add', { who: missing[0].label }) : t('tree.next.record', { name: unrecordedElder!.fullName })}
                   </p>
                   <p className="text-sm text-muted">
                     {missing.length > 0
-                      ? 'Even a first name helps relatives find you.'
-                      : 'Their voice is the part of your archive that can’t be rebuilt later.'}
+                      ? t('tree.next.addBody')
+                      : t('tree.next.recordBody')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <span className="text-[13px] text-muted whitespace-nowrap">Tree {filled} of {coreRoles.length}</span>
+                  <span className="text-[13px] text-muted whitespace-nowrap">{t('tree.next.progress', { filled, total: coreRoles.length })}</span>
                   <span aria-hidden="true" className="flex-1 sm:flex-none sm:w-28 h-2 rounded-full bg-sand overflow-hidden flex">
                     <span className="bg-forest" style={{ width: `${(filled / coreRoles.length) * 100}%` }} />
                   </span>
@@ -969,7 +972,7 @@ export default function App() {
                     }}
                     className="h-11 px-4 rounded-xl bg-ink text-cream font-semibold text-sm hover:bg-ink-soft cursor-pointer"
                   >
-                    {missing.length > 0 ? 'Add' : 'Record'}
+                    {missing.length > 0 ? t('tree.next.addButton') : t('tree.next.recordButton')}
                   </button>
                 </div>
               </div>
@@ -3301,7 +3304,7 @@ export default function App() {
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('social-impact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Social Impact</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('community-impact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Afrolineo in your Community</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setActiveScreen('about'); setSelectedAboutTab('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-gray-400 hover:text-white transition-colors">Support</a></li>
-                <li><button type="button" onClick={openCookieSettings} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Cookie settings</button></li>
+                <li><button type="button" onClick={openCookieSettings} className="text-gray-400 hover:text-white transition-colors cursor-pointer">{t('nav.cookies')}</button></li>
               </ul>
             </div>
 
@@ -3340,12 +3343,12 @@ export default function App() {
         const stories = recordings.filter((r) => r.profileId === person.id);
         const isUnset = (v?: string) => !v || v === 'Unspecified';
         const facts: { label: string; value?: string }[] = [
-          { label: 'Family compound', value: person.familyCompound },
-          { label: 'Hometown / LGA', value: person.lga },
-          { label: 'Ward', value: person.ward },
-          { label: 'Language', value: person.language },
-          { label: 'Born', value: person.birthYear },
-          { label: 'Birthplace', value: person.birthPlace },
+          { label: t('person.compound'), value: person.familyCompound },
+          { label: t('person.hometown'), value: person.lga },
+          { label: t('person.ward'), value: person.ward },
+          { label: t('person.language'), value: person.language },
+          { label: t('person.born'), value: person.birthYear },
+          { label: t('person.birthplace'), value: person.birthPlace },
         ];
         const formatDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
         const closePanel = () => {
@@ -3379,15 +3382,15 @@ export default function App() {
                     {person.fullName}
                   </h2>
                   <p className="mt-0.5 text-[15px] text-muted">
-                    {RELATION_PHRASE[person.role]}
-                    {person.role !== 'self' && <> · {person.isAlive ? 'Living' : 'Passed on'}</>}
+                    {t(roleKeys(person.role).relation)}
+                    {person.role !== 'self' && <> · {person.isAlive ? t('person.living') : t('person.passedOn')}</>}
                   </p>
                 </div>
                 <button
                   id="close-drawer-btn"
                   type="button"
                   onClick={closePanel}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   autoFocus
                   className="shrink-0 -mr-2 -mt-1 w-11 h-11 rounded-full text-muted hover:text-ink hover:bg-sand flex items-center justify-center cursor-pointer"
                 >
@@ -3407,18 +3410,18 @@ export default function App() {
                   className="w-full h-13 rounded-2xl bg-ochre hover:brightness-95 text-ink font-semibold text-base flex items-center justify-center gap-2.5 cursor-pointer"
                 >
                   <Mic className="w-5 h-5" aria-hidden="true" />
-                  {person.role === 'self' ? 'Record your own story' : `Record a story with ${firstName}`}
+                  {person.role === 'self' ? t('person.recordSelf') : t('person.recordWith', { name: firstName })}
                 </button>
 
                 {/* Details */}
                 <section aria-labelledby="profile-details-heading">
-                  <h3 id="profile-details-heading" className="font-sans text-base font-bold mb-3">Details</h3>
+                  <h3 id="profile-details-heading" className="font-sans text-base font-bold mb-3">{t('person.details')}</h3>
                   <dl className="grid grid-cols-2 gap-px bg-line rounded-2xl overflow-hidden border border-line">
                     {facts.map((f) => (
                       <div key={f.label} className="bg-white px-4 py-3">
                         <dt className="text-[13px] text-muted">{f.label}</dt>
                         <dd className={`mt-0.5 font-semibold text-[15px] break-words ${isUnset(f.value) ? 'text-[#9A8F82] font-normal' : ''}`}>
-                          {isUnset(f.value) ? 'Not added' : f.value}
+                          {isUnset(f.value) ? t('common.notAdded') : f.value}
                         </dd>
                       </div>
                     ))}
@@ -3428,7 +3431,7 @@ export default function App() {
                 {/* Notes */}
                 {person.notes && person.notes.trim() && (
                   <section aria-labelledby="profile-notes-heading">
-                    <h3 id="profile-notes-heading" className="font-sans text-base font-bold mb-2">About {firstName}</h3>
+                    <h3 id="profile-notes-heading" className="font-sans text-base font-bold mb-2">{t('person.about', { name: firstName })}</h3>
                     <p className="font-display text-[17px] leading-relaxed text-ink-soft whitespace-pre-line">{person.notes}</p>
                   </section>
                 )}
@@ -3436,15 +3439,15 @@ export default function App() {
                 {/* Stories */}
                 <section aria-labelledby="profile-stories-heading">
                   <div className="flex items-baseline justify-between mb-3">
-                    <h3 id="profile-stories-heading" className="font-sans text-base font-bold">Stories</h3>
+                    <h3 id="profile-stories-heading" className="font-sans text-base font-bold">{t('person.stories')}</h3>
                     {stories.length > 0 && <span className="text-sm text-muted">{stories.length}</span>}
                   </div>
 
                   {stories.length === 0 ? (
                     <div className="rounded-2xl border-[1.5px] border-dashed border-line-strong p-5 text-center">
-                      <p className="font-semibold">No stories yet</p>
-                      <p className="mt-1 text-sm text-muted">A good first question to ask:</p>
-                      <p className="mt-2 font-display italic text-[17px] text-ink-soft">“What is one thing you want your grandchildren to remember?”</p>
+                      <p className="font-semibold">{t('person.noStories')}</p>
+                      <p className="mt-1 text-sm text-muted">{t('person.firstQuestion')}</p>
+                      <p className="mt-2 font-display italic text-[17px] text-ink-soft">{t('person.firstQuestionText')}</p>
                     </div>
                   ) : (
                     <ul className="space-y-2.5">
@@ -3457,13 +3460,13 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => toggleStoryAudio(r)}
-                                  aria-label={`${isPlaying ? 'Pause' : 'Play'} ${r.title}`}
+                                  aria-label={isPlaying ? t('person.pause', { title: r.title }) : t('person.play', { title: r.title })}
                                   className="shrink-0 w-11 h-11 rounded-full bg-ink text-cream flex items-center justify-center cursor-pointer hover:bg-ink-soft"
                                 >
                                   {isPlaying ? <Pause className="w-[18px] h-[18px] fill-current" /> : <Play className="w-[18px] h-[18px] fill-current ml-0.5" />}
                                 </button>
                               ) : (
-                                <span className="shrink-0 w-11 h-11 rounded-full bg-sand text-ink-soft flex items-center justify-center" title="Transcript only">
+                                <span className="shrink-0 w-11 h-11 rounded-full bg-sand text-ink-soft flex items-center justify-center" title={t('person.transcriptOnly')}>
                                   <FileText className="w-[18px] h-[18px]" aria-hidden="true" />
                                 </span>
                               )}
@@ -3471,15 +3474,15 @@ export default function App() {
                                 <p className="font-semibold text-[15px] leading-snug">{r.title}</p>
                                 <p className="text-[13px] text-muted">
                                   {formatDuration(r.durationSec)} · {r.recordedAt}
-                                  {!r.audioBase64 && ' · transcript only'}
+                                  {!r.audioBase64 && ` · ${t('person.transcriptOnly')}`}
                                 </p>
                               </div>
                             </div>
                             {r.transcript && (
                               <details className="group mt-2.5">
                                 <summary className="list-none cursor-pointer text-sm font-semibold text-ochre-deep hover:underline underline-offset-4">
-                                  <span className="group-open:hidden">Read transcript</span>
-                                  <span className="hidden group-open:inline">Hide transcript</span>
+                                  <span className="group-open:hidden">{t('person.readTranscript')}</span>
+                                  <span className="hidden group-open:inline">{t('person.hideTranscript')}</span>
                                 </summary>
                                 <p className="mt-2 font-display text-[15.5px] leading-relaxed text-ink-soft whitespace-pre-line">{r.transcript}</p>
                               </details>
@@ -3504,15 +3507,15 @@ export default function App() {
                   className="flex-1 h-12 rounded-xl border-[1.5px] border-[#CFC4B4] bg-white font-semibold hover:border-ink cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Pencil className="w-4 h-4" aria-hidden="true" />
-                  Edit details
+                  {t('person.edit')}
                 </button>
                 {person.role !== 'self' && (
                   <button
                     id="delete-profile-drawer-btn"
                     type="button"
                     onClick={() => handleDeleteProfile(person.id)}
-                    aria-label={`Remove ${person.fullName} from tree`}
-                    title="Remove from tree"
+                    aria-label={t('person.remove', { name: person.fullName })}
+                    title={t('person.removeTitle')}
                     className="w-12 h-12 rounded-xl border-[1.5px] border-line text-muted hover:text-record hover:border-record/40 hover:bg-[#FDECEA] flex items-center justify-center cursor-pointer"
                   >
                     <Trash2 className="w-[18px] h-[18px]" />

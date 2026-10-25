@@ -11,6 +11,9 @@ import LineageMark from './LineageMark';
 import { track } from '../lib/analytics';
 import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from '../lib/consent';
 import CookieConsent from './CookieConsent';
+import LanguageSwitcher, { LanguageAutoNote } from './LanguageSwitcher';
+import { useI18n } from '../i18n';
+import type { MessageKey } from '../i18n/locales/en';
 
 import { ARTICLES, GIFTS, STORIES } from '../data/exploreData';
 
@@ -143,54 +146,39 @@ const getEthnicGroupsForCountry = (country: string): string[] => {
 
 const WAVEFORM = [30, 55, 40, 70, 85, 60, 45, 75, 95, 65, 50, 80, 70, 40, 55, 90, 75, 50, 35, 60, 80, 65, 45, 70, 55, 40, 60, 75, 50, 35, 45, 65, 55, 40, 30, 50, 40, 30, 25, 35];
 
-const HOW_IT_WORKS = [
-  {
-    icon: Mic,
-    tint: 'bg-ochre-tint text-paternal-ink',
-    title: 'Record an elder',
-    body: 'Press record and let them talk, or upload a voice note a relative sent you. Each story is transcribed and filed under that person\u2019s name.',
-  },
-  {
-    icon: LineageMark,
-    tint: 'bg-forest-tint text-forest',
-    title: 'Map your lineage',
-    body: 'Add parents, grandparents and siblings. Note each person\u2019s family compound, town and language, the details paper records leave out.',
-  },
-  {
-    icon: Users,
-    tint: 'bg-indigo-tint text-indigo',
-    title: 'Find your kin',
-    body: 'When another family names the same compound or district, we let you know. You decide whether to connect.',
-  },
+const HOW_IT_WORKS: { icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>; tint: string; title: MessageKey; body: MessageKey }[] = [
+  { icon: Mic, tint: 'bg-ochre-tint text-paternal-ink', title: 'landing.how.step1.title', body: 'landing.how.step1.body' },
+  { icon: LineageMark, tint: 'bg-forest-tint text-forest', title: 'landing.how.step2.title', body: 'landing.how.step2.body' },
+  { icon: Users, tint: 'bg-indigo-tint text-indigo', title: 'landing.how.step3.title', body: 'landing.how.step3.body' },
 ];
 
-const SAMPLE_TRANSCRIPT = [
-  { time: '0:12', text: 'My grandchildren, remember this. Our people did not begin in this town.' },
-  { time: '0:31', text: 'We left in the dry season, carrying the seed yams and the names of our fathers.' },
-  { time: '0:54', text: 'The market women of Onitsha knew my mother by her cloth\u2026' },
+const SAMPLE_TRANSCRIPT: { time: string; text: MessageKey }[] = [
+  { time: '0:12', text: 'landing.stories.line1' },
+  { time: '0:31', text: 'landing.stories.line2' },
+  { time: '0:54', text: 'landing.stories.line3' },
 ];
 
-const STORY_POINTS = [
-  { title: 'In their own language.', body: 'Yoruba, Igbo, Hausa, Wolof, Twi and more.' },
-  { title: 'Searchable transcripts.', body: 'Find every mention of a town or a name.' },
-  { title: 'Attached to the person.', body: 'Open anyone in the tree to hear them.' },
+const STORY_POINTS: { title: MessageKey; body: MessageKey }[] = [
+  { title: 'landing.stories.point1.title', body: 'landing.stories.point1.body' },
+  { title: 'landing.stories.point2.title', body: 'landing.stories.point2.body' },
+  { title: 'landing.stories.point3.title', body: 'landing.stories.point3.body' },
 ];
 
-const PRIVACY_POINTS = [
-  { icon: Lock, title: 'Your stories stay with you', body: 'Recordings, transcripts and notes are stored in your own browser. We keep only your account, an outline of your tree (names and relationships) and how you use the app.' },
-  { icon: Download, title: 'Export everything', body: 'Download your whole archive, with audio and transcripts, as one file whenever you want.' },
-  { icon: ShieldCheck, title: 'You choose who connects', body: 'Other families only see a match if you both agree to link.' },
+const PRIVACY_POINTS: { icon: typeof Lock; title: MessageKey; body: MessageKey }[] = [
+  { icon: Lock, title: 'landing.privacy.point1.title', body: 'landing.privacy.point1.body' },
+  { icon: Download, title: 'landing.privacy.point2.title', body: 'landing.privacy.point2.body' },
+  { icon: ShieldCheck, title: 'landing.privacy.point3.title', body: 'landing.privacy.point3.body' },
 ];
 
-const FOOTER_LINKS: { label: string; tab?: string; cookies?: boolean }[] = [
-  { label: 'Articles', tab: 'articles' },
-  { label: 'Family stories', tab: 'customer-stories' },
-  { label: 'Gifts', tab: 'gifts' },
-  { label: 'Privacy', tab: 'privacy' },
-  { label: 'Terms', tab: 'terms' },
-  { label: 'Help', tab: 'support' },
-  { label: 'All pages' },
-  { label: 'Cookie settings', cookies: true },
+const FOOTER_LINKS: { label: MessageKey; tab?: string; cookies?: boolean }[] = [
+  { label: 'landing.footer.articles', tab: 'articles' },
+  { label: 'landing.footer.stories', tab: 'customer-stories' },
+  { label: 'landing.footer.gifts', tab: 'gifts' },
+  { label: 'landing.footer.privacy', tab: 'privacy' },
+  { label: 'landing.footer.terms', tab: 'terms' },
+  { label: 'landing.footer.help', tab: 'support' },
+  { label: 'landing.footer.allPages' },
+  { label: 'landing.footer.cookies', cookies: true },
 ];
 
 function PreviewAvatar({ initials, dashed, size = 'md', className = '' }: { initials?: string; dashed?: boolean; size?: 'md' | 'lg'; className?: string }) {
@@ -215,16 +203,22 @@ function PatternBand() {
 
 // ---------- Sign-in window ----------
 
+// Stored value (kept in English for the data) → ISO code for showing a translated name
+const COUNTRY_OPTIONS: [string, string | null][] = [
+  ['Nigeria', 'NG'], ['Ghana', 'GH'], ['Sierra Leone', 'SL'], ['Kenya', 'KE'],
+  ['South Africa', 'ZA'], ['Zimbabwe', 'ZW'], ['Angola / Congo-Zaire', null],
+];
+
 const FIELD_CLASS =
   'w-full h-12 px-4 rounded-xl bg-white border border-line text-[15px] text-ink outline-none transition focus:border-ochre focus:ring-2 focus:ring-ochre/25 disabled:opacity-60';
 const LABEL_CLASS = 'block text-sm font-semibold text-ink-soft mb-1.5';
 const PRIMARY_BUTTON_CLASS =
   'w-full h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60';
 
-const KNOWLEDGE_OPTIONS = [
-  { value: 'Just starting out', title: 'Just starting', body: 'I know my parents, maybe a grandparent.' },
-  { value: 'Know 2-3 generations', title: 'Some generations', body: 'I know my parents and grandparents.' },
-  { value: 'Pre-colonial dynasty archivist', title: 'Deep history', body: 'I know four or more generations.' },
+const KNOWLEDGE_OPTIONS: { value: string; title: MessageKey; body: MessageKey }[] = [
+  { value: 'Just starting out', title: 'onboarding.k1.title', body: 'onboarding.k1.body' },
+  { value: 'Know 2-3 generations', title: 'onboarding.k2.title', body: 'onboarding.k2.body' },
+  { value: 'Pre-colonial dynasty archivist', title: 'onboarding.k3.title', body: 'onboarding.k3.body' },
 ];
 
 const OAUTH_PROVIDERS: { id: string; label: string; icon: React.ReactNode }[] = [
@@ -294,6 +288,16 @@ function StatusMessage({ error, success }: { error?: string; success?: string })
 }
 
 export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
+  const { t, rich, lang } = useI18n();
+  // Country names in the visitor's language, from the browser's built-in list
+  const countryName = (code: string, fallback: string) => {
+    try {
+      return new Intl.DisplayNames([lang], { type: 'region' }).of(code) || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   // Navigation & Interactive modal state
   const [isLoginWindowOpen, setIsLoginWindowOpen] = useState(false);
   const [showSitemapLanding, setShowSitemapLanding] = useState(false);
@@ -406,7 +410,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     setErrorMsg('');
     setSuccessMsg('');
     if (!forgotEmail) {
-      setErrorMsg('Please enter your email address.');
+      setErrorMsg(t('auth.err.email'));
       return;
     }
     setIsLoading(true);
@@ -423,15 +427,15 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     setSuccessMsg('');
 
     if (!email) {
-      setErrorMsg('Please enter your email address.');
+      setErrorMsg(t('auth.err.email'));
       return;
     }
     if (!password || password.length < 5) {
-      setErrorMsg('Your password needs at least 5 characters.');
+      setErrorMsg(t('auth.err.password'));
       return;
     }
     if (isSignUp && !fullName) {
-      setErrorMsg('Please enter your name.');
+      setErrorMsg(t('auth.err.name'));
       return;
     }
 
@@ -441,7 +445,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
     setTimeout(() => {
       setIsLoading(false);
       const computedName = isSignUp ? fullName : email.split('@')[0];
-      setSuccessMsg('Signed in. Just a few questions about your roots…');
+      setSuccessMsg(t('auth.signedIn'));
       
       setTimeout(() => {
         setSuccessMsg('');
@@ -493,27 +497,30 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
       
       {/* ===================== LANDING PAGE ===================== */}
       <div className="relative z-10 bg-cream text-ink min-h-screen">
+        <LanguageAutoNote />
 
         {/* Header */}
         <header className="border-b border-line">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
-            <a href="#top" className="flex items-center gap-2.5 text-ink no-underline">
+            <a href="#top" aria-label="Afrolineo" className="flex items-center gap-2.5 text-ink no-underline shrink-0">
               <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
                 <LineageMark className="w-5 h-5 text-[#E2A04F]" />
               </span>
-              <span className="font-display text-xl sm:text-[22px] font-semibold tracking-tight">Afrolineo</span>
+              <span className="hidden min-[430px]:inline font-display text-xl sm:text-[22px] font-semibold tracking-tight">Afrolineo</span>
             </a>
-            <nav aria-label="Main" className="hidden md:flex gap-7 text-[15px] font-medium">
-              <a href="#how" className="text-ink-soft hover:text-ink">How it works</a>
-              <a href="#stories" className="text-ink-soft hover:text-ink">Stories</a>
-              <a href="#privacy" className="text-ink-soft hover:text-ink">Privacy</a>
+            <nav aria-label={t('landing.nav.label')} className="hidden md:flex gap-7 text-[15px] font-medium">
+              <a href="#how" className="text-ink-soft hover:text-ink">{t('landing.nav.how')}</a>
+              <a href="#stories" className="text-ink-soft hover:text-ink">{t('landing.nav.stories')}</a>
+              <a href="#privacy" className="text-ink-soft hover:text-ink">{t('landing.nav.privacy')}</a>
             </nav>
             <div className="flex items-center gap-1">
+              <div className="hidden sm:block"><LanguageSwitcher /></div>
+              <div className="sm:hidden"><LanguageSwitcher compact /></div>
               <button type="button" onClick={openSignIn} className="px-3 sm:px-4 py-3 text-[15px] font-semibold text-ink rounded-full hover:bg-sand cursor-pointer whitespace-nowrap">
-                Sign in
+                {t('landing.signIn')}
               </button>
               <button type="button" onClick={openSignUp} className="px-4 sm:px-5 py-3 text-[15px] font-semibold text-ink bg-ochre hover:brightness-95 rounded-full cursor-pointer whitespace-nowrap">
-                Start free
+                {t('landing.startFree')}
               </button>
             </div>
           </div>
@@ -524,25 +531,25 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
           <div>
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-paternal-ink bg-ochre-tint px-3.5 py-1.5 rounded-full">
               <Mic className="w-4 h-4" aria-hidden="true" />
-              Oral history &amp; family trees for African families
+              {t('landing.hero.badge')}
             </p>
             <h1 className="mt-5 font-display font-medium text-[42px] sm:text-6xl lg:text-[68px] leading-[1.04] tracking-[-0.025em]">
-              Every family has a story. <span className="italic text-[#9A5B14]">Keep yours.</span>
+              {t('landing.hero.title')} <span className="italic text-[#9A5B14]">{t('landing.hero.titleAccent')}</span>
             </h1>
             <p className="mt-6 text-lg sm:text-[19px] leading-relaxed text-[#4A423A] max-w-[520px]">
-              Record your elders in their own voices, map your lineage back to the family compound, and keep it all somewhere only your family controls.
+              {t('landing.hero.lead')}
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <button type="button" onClick={openSignUp} className="inline-flex items-center gap-2.5 bg-ochre hover:brightness-95 text-ink font-semibold px-7 py-4 rounded-full cursor-pointer group">
-                Start your family tree
+                {t('landing.hero.cta')}
                 <ArrowRight className="w-[18px] h-[18px] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </button>
               <a href="#how" className="inline-flex items-center gap-2.5 border-[1.5px] border-[#CFC4B4] hover:border-ink text-ink font-semibold px-6 py-[15px] rounded-full">
-                See how it works
+                {t('landing.hero.secondary')}
               </a>
             </div>
             <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2.5 text-[14.5px] text-[#4A423A]">
-              {['Free to start', 'Works in your browser', 'Export everything, anytime'].map((item) => (
+              {[t('landing.hero.point1'), t('landing.hero.point2'), t('landing.hero.point3')].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <Check className="w-[18px] h-[18px] text-forest" strokeWidth={2.4} aria-hidden="true" />
                   {item}
@@ -556,10 +563,10 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
             <div className="bg-white border border-[#E6DED2] rounded-[22px] px-6 pt-6 pb-[72px] shadow-[0_24px_60px_-30px_rgba(60,40,15,0.35)]">
               <div className="flex justify-between items-center gap-3 mb-7">
                 <div>
-                  <div className="font-display text-xl font-semibold">Babajide family</div>
-                  <div className="text-[13px] text-muted">8 people · 3 generations</div>
+                  <div className="font-display text-xl font-semibold">{t('landing.preview.family')}</div>
+                  <div className="text-[13px] text-muted">{t('landing.preview.meta')}</div>
                 </div>
-                <span className="text-[13px] font-semibold text-forest bg-forest-tint px-3 py-1 rounded-full">4 stories</span>
+                <span className="text-[13px] font-semibold text-forest bg-forest-tint px-3 py-1 rounded-full">{t('landing.preview.stories')}</span>
               </div>
               <div className="flex flex-col items-center">
                 <div className="flex gap-12">
@@ -584,7 +591,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 <span className="w-0.5 h-6.5 bg-[#D5C8B5]" />
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="w-[60px] h-[60px] rounded-full bg-ink text-cream font-bold flex items-center justify-center">AA</span>
-                  <span className="text-[13px] font-semibold">You</span>
+                  <span className="text-[13px] font-semibold">{t('landing.preview.you')}</span>
                 </div>
               </div>
             </div>
@@ -594,8 +601,8 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   <Play className="w-5 h-5 text-ink fill-ink ml-0.5" />
                 </span>
                 <div className="min-w-0">
-                  <div className="font-semibold text-[15.5px]">Anambra migration &amp; market roots</div>
-                  <div className="text-[13px] text-[#BDB2A4]">Grandmother Nneka · 2:58</div>
+                  <div className="font-semibold text-[15.5px]">{t('landing.preview.storyTitle')}</div>
+                  <div className="text-[13px] text-[#BDB2A4]">{t('landing.preview.storyMeta')}</div>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-[3px] h-9">
@@ -604,7 +611,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 ))}
               </div>
               <p className="mt-3.5 font-display italic text-[15px] leading-normal text-[#E5DCCD]">
-                “We left in the dry season, carrying the seed yams and the names of our fathers…”
+                {t('landing.preview.quote')}
               </p>
             </div>
           </div>
@@ -614,9 +621,9 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
         {/* How it works */}
         <section id="how" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24 scroll-mt-4">
-          <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">How it works</p>
+          <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">{t('landing.how.eyebrow')}</p>
           <h2 className="mt-3 font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em] max-w-[760px]">
-            From a grandmother’s voice to a family tree you can pass on.
+            {t('landing.how.title')}
           </h2>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {HOW_IT_WORKS.map((step, i) => (
@@ -627,8 +634,8 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   </span>
                   <span className="font-display text-[28px] text-[#B8AB98]">0{i + 1}</span>
                 </div>
-                <h3 className="mt-7 mb-2 font-sans text-[21px] font-semibold">{step.title}</h3>
-                <p className="text-[#4A423A] leading-relaxed">{step.body}</p>
+                <h3 className="mt-7 mb-2 font-sans text-[21px] font-semibold">{t(step.title)}</h3>
+                <p className="text-[#4A423A] leading-relaxed">{t(step.body)}</p>
               </article>
             ))}
           </div>
@@ -642,30 +649,30 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 <span className="w-12 h-12 rounded-full bg-forest-tint text-forest font-bold flex items-center justify-center">GN</span>
                 <div>
                   <div className="font-semibold">Grandmother Nneka</div>
-                  <div className="text-[13.5px] text-muted">Recorded in Igbo · Okeke Palace Compound</div>
+                  <div className="text-[13.5px] text-muted">{t('landing.stories.recordedIn')}</div>
                 </div>
-                <span className="ml-auto text-[12.5px] font-semibold text-muted border border-line px-2.5 py-1 rounded-full">Sample</span>
+                <span className="ml-auto text-[12.5px] font-semibold text-muted border border-line px-2.5 py-1 rounded-full">{t('landing.stories.sample')}</span>
               </div>
               <div className="mt-6 flex flex-col gap-4">
                 {SAMPLE_TRANSCRIPT.map((line, i) => (
                   <div key={line.time} className={`flex gap-4 ${i === 1 ? 'bg-[#FBF4E8] -mx-3 p-3 rounded-xl' : ''}`}>
                     <span className="shrink-0 w-10 pt-1 text-[13px] font-semibold text-ochre-deep">{line.time}</span>
-                    <p className={`font-display text-lg leading-relaxed ${i === 2 ? 'text-muted' : 'text-[#2D2926]'}`}>{line.text}</p>
+                    <p className={`font-display text-lg leading-relaxed ${i === 2 ? 'text-muted' : 'text-[#2D2926]'}`}>{t(line.text)}</p>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">Stories</p>
-              <h2 className="mt-3 font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em]">Voices, not just names.</h2>
+              <p className="text-sm font-bold tracking-[0.08em] uppercase text-ochre-deep">{t('landing.stories.eyebrow')}</p>
+              <h2 className="mt-3 font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em]">{t('landing.stories.title')}</h2>
               <p className="mt-5 text-lg text-[#4A423A] max-w-[480px] leading-relaxed">
-                A name on a chart tells you who someone was. Their voice tells you how they spoke, what they remembered and what they wanted you to know.
+                {t('landing.stories.lead')}
               </p>
               <ul className="mt-8 flex flex-col gap-5">
                 {STORY_POINTS.map((point) => (
                   <li key={point.title} className="flex gap-3.5">
                     <Check className="w-[22px] h-[22px] text-forest shrink-0 mt-0.5" strokeWidth={2.4} aria-hidden="true" />
-                    <span><strong className="font-semibold">{point.title}</strong> <span className="text-[#4A423A]">{point.body}</span></span>
+                    <span><strong className="font-semibold">{t(point.title)}</strong> <span className="text-[#4A423A]">{t(point.body)}</span></span>
                   </li>
                 ))}
               </ul>
@@ -678,14 +685,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
           <PatternBand />
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
             <h2 className="font-display font-medium text-[32px] sm:text-[44px] leading-[1.12] tracking-[-0.02em] text-cream max-w-[720px]">
-              Your family’s memory belongs to your family.
+              {t('landing.privacy.title')}
             </h2>
             <div className="mt-12 grid gap-10 md:grid-cols-3">
               {PRIVACY_POINTS.map((point) => (
                 <div key={point.title}>
                   <point.icon className="w-7 h-7 text-[#E2A04F]" strokeWidth={1.8} aria-hidden="true" />
-                  <h3 className="mt-4 mb-2 font-sans text-[19px] font-semibold text-cream">{point.title}</h3>
-                  <p className="text-[#C9BFB1] leading-relaxed">{point.body}</p>
+                  <h3 className="mt-4 mb-2 font-sans text-[19px] font-semibold text-cream">{t(point.title)}</h3>
+                  <p className="text-[#C9BFB1] leading-relaxed">{t(point.body)}</p>
                 </div>
               ))}
             </div>
@@ -694,12 +701,12 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
         {/* Final call to action */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 sm:py-28 text-center">
-          <h2 className="font-display font-medium text-4xl sm:text-[56px] leading-[1.08] tracking-[-0.02em]">Start with one story.</h2>
+          <h2 className="font-display font-medium text-4xl sm:text-[56px] leading-[1.08] tracking-[-0.02em]">{t('landing.final.title')}</h2>
           <p className="mt-4 mx-auto text-lg sm:text-[19px] text-[#4A423A] max-w-[520px]">
-            Begin with the oldest person you know. One recording is enough to start a family archive.
+            {t('landing.final.lead')}
           </p>
           <button type="button" onClick={openSignUp} className="mt-9 inline-flex items-center gap-2.5 bg-ochre hover:brightness-95 text-ink font-semibold text-[17px] px-8 py-[18px] rounded-full cursor-pointer group">
-            Start your family tree
+            {t('landing.hero.cta')}
             <ArrowRight className="w-[18px] h-[18px] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
           </button>
         </section>
@@ -707,8 +714,11 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
         {/* Footer */}
         <footer className="border-t border-[#E6DED2]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-wrap justify-between items-center gap-4 text-[14.5px] text-muted">
-            <span><span className="font-display font-semibold text-ink text-[17px]">Afrolineo</span> · © 2026</span>
-            <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+            <div className="flex items-center gap-3">
+              <span><span className="font-display font-semibold text-ink text-[17px]">Afrolineo</span> · © 2026</span>
+              <LanguageSwitcher align="left" direction="up" />
+            </div>
+            <nav aria-label={t('landing.footer.label')} className="flex flex-wrap gap-x-6 gap-y-2">
               {FOOTER_LINKS.map((link) => (
                 <button
                   key={link.label}
@@ -716,11 +726,14 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   onClick={() => (link.cookies ? openCookieSettings() : link.tab ? setActiveAboutTabLanding(link.tab) : setShowSitemapLanding(true))}
                   className="text-muted hover:text-ink underline-offset-4 hover:underline cursor-pointer"
                 >
-                  {link.label}
+                  {t(link.label)}
                 </button>
               ))}
             </nav>
           </div>
+          {t('landing.footer.englishOnly') && lang !== 'en' && (
+            <p className="max-w-6xl mx-auto px-4 sm:px-6 pb-6 -mt-3 text-[13px] text-muted">{t('landing.footer.englishOnly')}</p>
+          )}
         </footer>
       </div>
 
@@ -742,7 +755,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
             <button
               type="button"
               onClick={closeLoginWindow}
-              aria-label="Close"
+              aria-label={t('common.close')}
               className="absolute top-3 right-3 w-11 h-11 rounded-full text-muted hover:text-ink hover:bg-sand flex items-center justify-center cursor-pointer"
             >
               <CloseIcon className="w-5 h-5" />
@@ -751,17 +764,17 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
             {draftUser ? (
               /* ---------- Step 2: about your roots ---------- */
               <div className="animate-fadeIn">
-                <p className="text-sm font-semibold text-ochre-deep">Step 2 of 2</p>
+                <p className="text-sm font-semibold text-ochre-deep">{t('onboarding.step')}</p>
                 <h2 id="login-window-title" className="mt-1 font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
-                  Tell us about your roots
+                  {t('onboarding.title')}
                 </h2>
                 <p className="mt-2 text-[15px] text-muted leading-relaxed">
-                  Welcome, <strong className="text-ink font-semibold">{draftUser.name}</strong>. This helps us suggest the right languages and interview questions for your family.
+                  {rich('onboarding.lead', { name: <strong className="text-ink font-semibold">{draftUser.name}</strong> })}
                 </p>
 
                 <div className="mt-6 space-y-4">
                   <div>
-                    <label htmlFor="ancestry-country" className={LABEL_CLASS}>Country</label>
+                    <label htmlFor="ancestry-country" className={LABEL_CLASS}>{t('onboarding.country')}</label>
                     <select
                       id="ancestry-country"
                       value={ancestralCountry}
@@ -774,21 +787,17 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       }}
                       className={FIELD_CLASS}
                     >
-                      <option value="Nigeria">Nigeria</option>
-                      <option value="Ghana">Ghana</option>
-                      <option value="Sierra Leone">Sierra Leone</option>
-                      <option value="Kenya">Kenya</option>
-                      <option value="South Africa">South Africa</option>
-                      <option value="Zimbabwe">Zimbabwe</option>
-                      <option value="Angola / Congo-Zaire">Angola / Congo-Zaire</option>
-                      <option value="Other African Native Region">Another African country</option>
+                      {COUNTRY_OPTIONS.map(([value, code]) => (
+                        <option key={value} value={value}>{code ? countryName(code, value) : value}</option>
+                      ))}
+                      <option value="Other African Native Region">{t('onboarding.otherCountry')}</option>
                     </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="ancestry-state" className={LABEL_CLASS}>
-                        State or region <span className="font-normal text-muted">(optional)</span>
+                        {t('onboarding.state')} <span className="font-normal text-muted">{t('common.optional')}</span>
                       </label>
                       <select
                         id="ancestry-state"
@@ -799,7 +808,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         }}
                         className={FIELD_CLASS}
                       >
-                        <option value="">Choose…</option>
+                        <option value="">{t('common.choose')}</option>
                         {(STATES_BY_COUNTRY[ancestralCountry] || []).map((st) => (
                           <option key={st} value={st}>{st}</option>
                         ))}
@@ -807,7 +816,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </div>
                     <div>
                       <label htmlFor="ancestry-ward" className={LABEL_CLASS}>
-                        Ward or district <span className="font-normal text-muted">(optional)</span>
+                        {t('onboarding.ward')} <span className="font-normal text-muted">{t('common.optional')}</span>
                       </label>
                       <select
                         id="ancestry-ward"
@@ -815,7 +824,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                         onChange={(e) => setAncestralWard(e.target.value)}
                         className={FIELD_CLASS}
                       >
-                        <option value="">Choose…</option>
+                        <option value="">{t('common.choose')}</option>
                         {getWardsForState(ancestralState).map((wd) => (
                           <option key={wd} value={wd}>{wd}</option>
                         ))}
@@ -824,7 +833,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   </div>
 
                   <div>
-                    <label htmlFor="ancestry-ethnic" className={LABEL_CLASS}>Ethnic group or language</label>
+                    <label htmlFor="ancestry-ethnic" className={LABEL_CLASS}>{t('onboarding.ethnic')}</label>
                     <select
                       id="ancestry-ethnic"
                       value={ethnicGroup}
@@ -839,12 +848,12 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                   <div>
                     <label htmlFor="ancestry-custodian" className={LABEL_CLASS}>
-                      Who would you like to record first? <span className="font-normal text-muted">(optional)</span>
+                      {t('onboarding.custodian')} <span className="font-normal text-muted">{t('common.optional')}</span>
                     </label>
                     <input
                       id="ancestry-custodian"
                       type="text"
-                      placeholder="e.g. Grandma Nneka, Papa Alao"
+                      placeholder={t('onboarding.custodianPlaceholder')}
                       value={custodianName}
                       onChange={(e) => setCustodianName(e.target.value)}
                       className={FIELD_CLASS}
@@ -852,7 +861,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   </div>
 
                   <fieldset>
-                    <legend className={LABEL_CLASS}>How much of your family history do you know?</legend>
+                    <legend className={LABEL_CLASS}>{t('onboarding.knowledge')}</legend>
                     <div className="grid gap-2">
                       {KNOWLEDGE_OPTIONS.map((opt) => {
                         const checked = knowledgeLevel === opt.value;
@@ -872,8 +881,8 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                               className="w-4 h-4 accent-[#9A5B14]"
                             />
                             <span>
-                              <span className="block text-[15px] font-semibold leading-tight">{opt.title}</span>
-                              <span className="block text-[13px] text-muted">{opt.body}</span>
+                              <span className="block text-[15px] font-semibold leading-tight">{t(opt.title)}</span>
+                              <span className="block text-[13px] text-muted">{t(opt.body)}</span>
                             </span>
                           </label>
                         );
@@ -888,7 +897,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     onClick={() => setDraftUser(null)}
                     className="h-12 px-5 rounded-full border-[1.5px] border-[#CFC4B4] font-semibold hover:border-ink cursor-pointer"
                   >
-                    Back
+                    {t('common.back')}
                   </button>
                   <button
                     type="button"
@@ -907,7 +916,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     }}
                     className="flex-1 h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Open my family tree
+                    {t('onboarding.open')}
                     <ArrowRight className="w-[18px] h-[18px]" aria-hidden="true" />
                   </button>
                 </div>
@@ -916,16 +925,16 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
               /* ---------- Forgot password ---------- */
               <div className="animate-fadeIn">
                 <h2 id="login-window-title" className="font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
-                  Reset your password
+                  {t('auth.reset.title')}
                 </h2>
-                <p className="mt-2 text-[15px] text-muted">Enter your email and we’ll send you a link to choose a new one.</p>
+                <p className="mt-2 text-[15px] text-muted">{t('auth.reset.lead')}</p>
 
                 <StatusMessage error={errorMsg} success={isForgotSubmitted ? '' : successMsg} />
 
                 {!isForgotSubmitted ? (
                   <form onSubmit={handleForgotSubmit} className="mt-6 space-y-4">
                     <div>
-                      <label htmlFor="forgot-email" className={LABEL_CLASS}>Email</label>
+                      <label htmlFor="forgot-email" className={LABEL_CLASS}>{t('auth.email')}</label>
                       <input
                         id="forgot-email"
                         type="email"
@@ -939,18 +948,18 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       />
                     </div>
                     <button type="submit" disabled={isLoading} className={PRIMARY_BUTTON_CLASS}>
-                      {isLoading ? <><Spinner /> Sending…</> : 'Send reset link'}
+                      {isLoading ? <><Spinner /> {t('auth.reset.sending')}</> : t('auth.reset.send')}
                     </button>
                   </form>
                 ) : (
                   <div role="status" className="mt-6 p-4 rounded-2xl bg-forest-tint text-forest">
                     <p className="font-semibold flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5" aria-hidden="true" /> Check your inbox
+                      <CheckCircle2 className="w-5 h-5" aria-hidden="true" /> {t('auth.reset.checkInbox')}
                     </p>
                     <p className="mt-1 text-[14px] text-ink-soft">
-                      If an account exists for <strong className="font-semibold">{forgotEmail}</strong>, a reset link is on its way.
+                      {rich('auth.reset.sent', { email: <strong className="font-semibold">{forgotEmail}</strong> })}
                     </p>
-                    <p className="mt-2 text-[13px] text-muted">Demo mode: no email is actually sent. Go back and sign in with any password.</p>
+                    <p className="mt-2 text-[13px] text-muted">{t('auth.reset.demo')}</p>
                   </div>
                 )}
 
@@ -965,7 +974,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   }}
                   className="mt-6 text-[15px] font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
                 >
-                  ← Back to sign in
+                  {t('auth.reset.back')}
                 </button>
               </div>
             ) : (
@@ -975,10 +984,10 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   <LineageMark className="w-6 h-6 text-[#E2A04F]" />
                 </span>
                 <h2 id="login-window-title" className="mt-4 font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
-                  {isSignUp ? 'Start your family archive' : 'Welcome back'}
+                  {isSignUp ? t('auth.startArchive') : t('auth.welcomeBack')}
                 </h2>
                 <p className="mt-1.5 text-[15px] text-muted">
-                  {isSignUp ? 'Free to start. Your recordings stay on your device.' : 'Sign in to continue your family tree.'}
+                  {isSignUp ? t('auth.signUpLead') : t('auth.signInLead')}
                 </p>
 
                 <div className="mt-6 grid grid-cols-2 gap-2.5">
@@ -999,7 +1008,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                 <div className="my-6 flex items-center gap-3 text-sm text-muted">
                   <span className="flex-1 h-px bg-line" />
-                  or use email
+                  {t('auth.orEmail')}
                   <span className="flex-1 h-px bg-line" />
                 </div>
 
@@ -1008,12 +1017,12 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 <form onSubmit={handleEmailSubmit} className="space-y-4" noValidate>
                   {isSignUp && (
                     <div>
-                      <label htmlFor="login-field-fullname" className={LABEL_CLASS}>Your name</label>
+                      <label htmlFor="login-field-fullname" className={LABEL_CLASS}>{t('auth.name')}</label>
                       <input
                         id="login-field-fullname"
                         type="text"
                         autoComplete="name"
-                        placeholder="e.g. Adefolarin Alao"
+                        placeholder={t('auth.namePlaceholder')}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         disabled={isLoading}
@@ -1022,7 +1031,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     </div>
                   )}
                   <div>
-                    <label htmlFor="login-field-email" className={LABEL_CLASS}>Email</label>
+                    <label htmlFor="login-field-email" className={LABEL_CLASS}>{t('auth.email')}</label>
                     <input
                       id="login-field-email"
                       type="email"
@@ -1036,7 +1045,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                   </div>
                   <div>
                     <div className="flex justify-between items-baseline">
-                      <label htmlFor="login-field-pass" className={LABEL_CLASS}>Password</label>
+                      <label htmlFor="login-field-pass" className={LABEL_CLASS}>{t('auth.password')}</label>
                       {!isSignUp && (
                         <button
                           type="button"
@@ -1047,7 +1056,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                           }}
                           className="text-sm font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
                         >
-                          Forgot password?
+                          {t('auth.forgot')}
                         </button>
                       )}
                     </div>
@@ -1055,7 +1064,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                       id="login-field-pass"
                       type="password"
                       autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                      placeholder={isSignUp ? 'At least 5 characters' : ''}
+                      placeholder={isSignUp ? t('auth.passwordHint') : ''}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={isLoading}
@@ -1065,18 +1074,18 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
 
                   <button id="login-submit-btn" type="submit" disabled={isLoading} className={PRIMARY_BUTTON_CLASS}>
                     {isLoading && !activeProvider ? (
-                      <><Spinner /> {isSignUp ? 'Creating account…' : 'Signing in…'}</>
+                      <><Spinner /> {isSignUp ? t('auth.creating') : t('auth.signingIn')}</>
                     ) : (
-                      isSignUp ? 'Create account' : 'Sign in'
+                      isSignUp ? t('auth.createAccount') : t('auth.signIn')
                     )}
                   </button>
                   <p className="text-[13px] text-muted text-center">
-                    Demo mode: any email and a password of 5+ characters will work.
+                    {t('auth.demoNote')}
                   </p>
                 </form>
 
                 <p className="mt-6 pt-5 border-t border-line text-center text-[15px] text-muted">
-                  {isSignUp ? 'Already have an account?' : 'New to Afrolineo?'}{' '}
+                  {isSignUp ? t('auth.haveAccount') : t('auth.newHere')}{' '}
                   <button
                     id="login-toggle-signup"
                     type="button"
@@ -1087,7 +1096,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                     }}
                     className="font-semibold text-ochre-deep hover:underline underline-offset-4 cursor-pointer"
                   >
-                    {isSignUp ? 'Sign in' : 'Create an account'}
+                    {isSignUp ? t('auth.signIn') : t('auth.createLink')}
                   </button>
                 </p>
               </div>
@@ -1103,9 +1112,9 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
             <span className="w-12 h-12 rounded-full bg-white border border-line flex items-center justify-center mx-auto">
               {OAUTH_PROVIDERS.find((p) => p.id === activeProvider)?.icon ?? <ShieldCheck className="w-6 h-6" />}
             </span>
-            <h2 id="oauth-title" className="mt-4 font-display font-medium text-2xl">Continue with {activeProvider}</h2>
+            <h2 id="oauth-title" className="mt-4 font-display font-medium text-2xl">{t('auth.oauth.title', { provider: activeProvider || '' })}</h2>
             <p className="mt-2 text-[15px] text-muted leading-relaxed">
-              This is a demo, so no {activeProvider} account is connected. Continue to try Afrolineo with a sample profile.
+              {t('auth.oauth.body', { provider: activeProvider || '' })}
             </p>
             <div className="mt-6 flex gap-3">
               <button
@@ -1118,7 +1127,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 }}
                 className="flex-1 h-12 rounded-full border-[1.5px] border-[#CFC4B4] font-semibold hover:border-ink cursor-pointer"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 id="oauth-confirm"
@@ -1127,7 +1136,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
                 disabled={isLoading}
                 className="flex-1 h-12 rounded-full bg-ochre hover:brightness-95 text-ink font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {isLoading ? <><Spinner /> One moment</> : 'Continue'}
+                {isLoading ? <><Spinner /> {t('auth.oauth.wait')}</> : t('auth.oauth.continue')}
               </button>
             </div>
           </div>

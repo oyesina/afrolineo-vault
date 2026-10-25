@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Profile, OralHistory, ConversationStarter } from '../types';
 import { Mic, Square, Play, Pause, RefreshCw, Sparkles, ChevronLeft, ChevronRight, HelpCircle, AlertCircle, Check, Loader2, Upload } from 'lucide-react';
+import { useI18n } from '../i18n';
+import type { MessageKey } from '../i18n/locales/en';
 
 interface RecordingStudioProps {
   profile: Profile;
@@ -8,41 +10,17 @@ interface RecordingStudioProps {
   onClose: () => void;
 }
 
-// Conversation Prompt Deck mapped directly to cultural focus
-const PROMPT_DECK: ConversationStarter[] = [
-  {
-    id: 'starter-1',
-    category: 'origins',
-    question: "What does our family compound and surname represent in the native tribe?",
-    hint: "Ask about early naming reasons, compound titles, or specific geographical landmarks near the compound."
-  },
-  {
-    id: 'starter-2',
-    category: 'migration',
-    question: "How did we come to settle in this LGA or current ward?",
-    hint: "Ask where they traveled from, the mode of transport, and who in the family led the original migration."
-  },
-  {
-    id: 'starter-3',
-    category: 'traditions',
-    question: "What specific traditional recipes, songs, or trades did your grandparents pass down?",
-    hint: "Ask about fabrics (Kente/Adire), special foods (Pounded yam, Jollof, Fufu), or specific harvest songs."
-  },
-  {
-    id: 'starter-4',
-    category: 'childhood',
-    question: "What was a typical day like inside the compound when you were growing up?",
-    hint: "Ask about evening storytelling around fires, tasks assigned, and traditional lessons taught by elders."
-  },
-  {
-    id: 'starter-5',
-    category: 'wisdom',
-    question: "What traditional proverb, lesson, or value is the most important for the next generation to never forget?",
-    hint: "Encourage them to speak it in their native tongue first, then explain the translation."
-  }
+// Interview questions; text lives in i18n/locales (rec.q1–q5 / rec.h1–h5)
+const PROMPT_DECK: { id: string; category: ConversationStarter['category']; question: MessageKey; hint: MessageKey }[] = [
+  { id: 'starter-1', category: 'origins', question: 'rec.q1', hint: 'rec.h1' },
+  { id: 'starter-2', category: 'migration', question: 'rec.q2', hint: 'rec.h2' },
+  { id: 'starter-3', category: 'traditions', question: 'rec.q3', hint: 'rec.h3' },
+  { id: 'starter-4', category: 'childhood', question: 'rec.q4', hint: 'rec.h4' },
+  { id: 'starter-5', category: 'wisdom', question: 'rec.q5', hint: 'rec.h5' },
 ];
 
 export default function RecordingStudio({ profile, onSaveRecording, onClose }: RecordingStudioProps) {
+  const { t, rich, lang } = useI18n();
   const [currentPromptIdx, setCurrentPromptIdx] = useState(0);
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'paused' | 'stopped'>('idle');
   const [recordTime, setRecordTime] = useState(0);
@@ -61,11 +39,11 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
 
   const processAudioFile = (file: File) => {
     if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|webm|ogg|aac|flac)$/i)) {
-      setTranscribeError('Invalid file type. Please select an audio file (MP3, WAV, M4A, WEBM, etc.).');
+      setTranscribeError(t('rec.err.type'));
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
-      setTranscribeError('Audio file is too large. Live or shared files should be under 25MB.');
+      setTranscribeError(t('rec.err.size'));
       return;
     }
 
@@ -91,7 +69,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
     };
 
     reader.onerror = () => {
-      setTranscribeError('Could not read the audio file. Please try another file.');
+      setTranscribeError(t('rec.err.read'));
     };
   };
 
@@ -260,19 +238,19 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
         body: JSON.stringify({
           audioBase64String: audioBase64 || null, // Real base64 if recorded, otherwise null prompts AI-generator
           metadata: profile,
-          promptQuestion: currentPrompt.question
+          promptQuestion: t(currentPrompt.question)
         })
       });
 
       if (!response.ok) {
-        throw new Error('Transcription pipeline returned error status.');
+        throw new Error(t('rec.err.transcribe'));
       }
 
       const data = await response.json();
       setTranscriptText(data.transcript);
       setSummaryText(data.summary);
     } catch (error: any) {
-      setTranscribeError(error?.message || 'Connecting to Gemini transcription failed. Please try again.');
+      setTranscribeError(t('rec.err.transcribe'));
     } finally {
       setTranscribing(false);
     }
@@ -280,23 +258,23 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
 
   const handleSave = () => {
     if (!customTitle.trim() && !customTitle) {
-      setTranscribeError('Please specify a title/topic for this story record.');
+      setTranscribeError(t('rec.err.title'));
       return;
     }
 
     onSaveRecording({
       profileId: profile.id,
-      title: customTitle.trim() || `Oral History: ${currentPrompt.category}`,
+      title: customTitle.trim() || t(currentPrompt.question),
       durationSec: recordTime || 15,
-      recordedAt: new Date().toLocaleDateString('en-US', {
+      recordedAt: new Date().toLocaleDateString(lang, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       }),
       audioBase64: audioBase64 || undefined,
-      transcript: transcriptText || 'Direct physical conversation with ancestor keeper. Notes recorded manually.',
-      summary: summaryText || 'Family lineage tradition record',
-      promptQuestion: currentPrompt.question
+      transcript: transcriptText || t('rec.defaultTranscript'),
+      summary: summaryText || '',
+      promptQuestion: t(currentPrompt.question)
     });
   };
 
@@ -321,9 +299,9 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
         <div className="flex items-center gap-2">
           <Mic className="w-5 h-5 text-red-500 animate-pulse" />
           <div>
-            <h3 className="font-display font-semibold text-base leading-tight">Oral History Recording Studio</h3>
+            <h3 className="font-display font-semibold text-base leading-tight">{t('rec.title')}</h3>
             <p className="text-xs text-gray-400 font-sans uppercase tracking-wider">
-              Capturing memory for: <span className="text-amber-400 font-bold">{profile.fullName}</span>
+              {rich('rec.with', { name: <span className="text-amber-400 font-bold">{profile.fullName}</span> })}
             </p>
           </div>
         </div>
@@ -331,6 +309,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
           id="close-studio-btn"
           type="button"
           onClick={onClose}
+          aria-label={t('common.close')}
           className="text-gray-400 hover:text-[#fcfbfa] transition-colors"
         >
           <Square className="w-4 h-4" />
@@ -343,17 +322,17 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
           <div className="flex justify-between items-center mb-2 text-xs text-gray-400 font-mono tracking-widest uppercase">
             <span className="flex items-center gap-1">
               <HelpCircle className="w-3.5 h-3.5" />
-              Conversation Starter Prompt
+              {t('rec.prompt')}
             </span>
-            <span>{currentPromptIdx + 1} / {PROMPT_DECK.length}</span>
+            <span>{t('rec.promptCount', { current: currentPromptIdx + 1, total: PROMPT_DECK.length })}</span>
           </div>
           
           <div className="min-h-[76px] flex flex-col justify-center">
             <p className="font-display font-medium text-base text-gray-900 pr-8 leading-snug">
-              "{currentPrompt.question}"
+              {t(currentPrompt.question)}
             </p>
             <p className="text-xs text-amber-900 mt-2 italic bg-amber-50 py-1.5 px-3 rounded border border-amber-100">
-              💡 {currentPrompt.hint}
+              {t(currentPrompt.hint)}
             </p>
           </div>
 
@@ -362,6 +341,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
             <button
               id="prev-prompt-deck"
               onClick={prevPrompt}
+              aria-label={t('rec.prevPrompt')}
               className="p-1.5 hover:bg-white border border-gray-100 rounded-full shadow-xs text-gray-600 transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -369,6 +349,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
             <button
               id="next-prompt-deck"
               onClick={nextPrompt}
+              aria-label={t('rec.nextPrompt')}
               className="p-1.5 hover:bg-white border border-gray-100 rounded-full shadow-xs text-gray-600 transition-colors cursor-pointer"
             >
               <ChevronRight className="w-3.5 h-3.5" />
@@ -395,19 +376,20 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 <button
                   id="start-recording-btn"
                   onClick={handleStartRecording}
+                  aria-label={t('rec.start')}
                   className="w-16 h-16 bg-red-650 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
                   <Mic className="w-7 h-7" />
                 </button>
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-gray-800">Press to Begin Voice Recording</p>
-                  <p className="text-xs text-gray-500 mt-1">Make sure you are in a quiet room with the elder speaker.</p>
+                  <p className="text-xs font-semibold text-gray-800">{t('rec.start')}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('rec.startHint')}</p>
                 </div>
               </div>
 
               <div className="w-full flex items-center gap-2 py-1">
                 <div className="h-px bg-gray-200 flex-1" />
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">OR</span>
+                <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">{t('rec.or')}</span>
                 <div className="h-px bg-gray-200 flex-1" />
               </div>
 
@@ -419,13 +401,13 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 >
                   <Upload className="w-6 h-6 text-[#E2A04F] hover:scale-110 mb-2 transition-transform" />
                   <span className="text-xs font-bold text-gray-700 group-hover:text-amber-900">
-                    Upload Audio from Relative
+                    {t('rec.upload')}
                   </span>
                   <span className="text-xs text-gray-400 mt-1">
-                    Drag and drop or click to browse
+                    {t('rec.uploadHint')}
                   </span>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Supports MP3, WAV, M4A, WEBM, OGG (Max 25MB)
+                    {t('rec.uploadTypes')}
                   </p>
                   <input
                     id="audio-file-upload"
@@ -456,7 +438,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                   {formatTimer(recordTime)}
                 </p>
                 <p className="text-xs text-red-650 uppercase font-semibold tracking-wider mt-1 animate-pulse">
-                  Now Capturing Oral Heritage...
+                  {t('rec.recording')}
                 </p>
               </div>
               <button
@@ -465,7 +447,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 className="px-5 py-2.5 bg-[#1a1918] hover:bg-gray-800 text-[#fcfbfa] rounded-lg text-xs font-semibold flex items-center gap-2 shadow cursor-pointer transition-all"
               >
                 <Square className="w-3.5 h-3.5 fill-[#fcfbfa]" />
-                Stop Recording
+                {t('rec.stop')}
               </button>
             </div>
           )}
@@ -473,7 +455,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
           {recordingState === 'stopped' && (
             <div className="flex flex-col items-center space-y-4 py-3 w-full">
               <div className="text-center bg-gray-150 py-2.5 px-6 rounded-lg font-mono text-sm border">
-                Record duration: <span className="font-bold text-amber-800">{formatTimer(recordTime)}</span>
+                {rich('rec.length', { time: <span className="font-bold text-amber-800">{formatTimer(recordTime)}</span> })}
               </div>
 
               {audioUrl && (
@@ -487,11 +469,12 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                   <button
                     id="play-recorded-voice-btn"
                     onClick={togglePlayback}
+                    aria-label={t('rec.replay')}
                     className="p-3 bg-amber-500 text-white rounded-full hover:scale-105 transition-all shadow cursor-pointer"
                   >
                     {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-white" />}
                   </button>
-                  <span className="text-xs text-gray-600 font-medium">Replay voice capture</span>
+                  <span className="text-xs text-gray-600 font-medium">{t('rec.replay')}</span>
                 </div>
               )}
 
@@ -502,7 +485,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                   className="px-4 py-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Discard & Re-record
+                  {t('rec.redo')}
                 </button>
 
                 {!transcriptText && (
@@ -517,7 +500,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                     ) : (
                       <Sparkles className="w-3.5 h-3.5" />
                     )}
-                    {transcribing ? 'Linguistic Analysis...' : 'Transcribe voice with Gemini AI'}
+                    {transcribing ? t('rec.transcribing') : t('rec.transcribe')}
                   </button>
                 )}
               </div>
@@ -531,13 +514,13 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
             {/* Title / Topic Specification */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Oral Story Topic / Title
+                {t('rec.storyTitle')}
               </label>
               <input
                 id="input-story-title"
                 type="text"
                 required
-                placeholder="e.g. Migration from Ogbomoso during early 1940s"
+                placeholder={t('rec.storyTitlePlaceholder')}
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 className="w-full text-sm border border-[#e2e2e0] rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
@@ -549,8 +532,8 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
               <div className="bg-[#faf9f6] border border-[#f0eee9] p-6 rounded-xl flex flex-col items-center justify-center space-y-3">
                 <Loader2 className="w-7 h-7 animate-spin text-amber-600" />
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-gray-800">Processing Audio with Server-Side Gemini...</p>
-                  <p className="text-xs text-gray-500 mt-1">Transcribing native accents, identifying compound origins, and compiling structural notes.</p>
+                  <p className="text-xs font-semibold text-gray-800">{t('rec.working')}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('rec.workingHint')}</p>
                 </div>
               </div>
             )}
@@ -560,10 +543,10 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 <div className="flex justify-between items-center border-b border-[#ebdaca] pb-2">
                   <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    Gemini AI Oral Transcript
+                    {t('rec.transcript')}
                   </span>
                   <span className="text-xs bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-medium">
-                    Translation Complete
+                    {t('rec.done')}
                   </span>
                 </div>
 
@@ -575,7 +558,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
 
                 {summaryText && (
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#f0eee9]">
-                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Suggested Tags:</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{t('rec.tags')}</span>
                     {summaryText.split(',').map((tag, i) => (
                       <span key={i} className="text-xs bg-[#1a1918] text-[#fcfbfa] px-2 py-0.5 rounded-full font-medium">
                         #{tag.trim()}
@@ -598,7 +581,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
               <div className="bg-amber-50 text-amber-900 border border-amber-150 p-3.5 rounded-lg text-xs flex gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="leading-snug">
-                  You haven't transcribed the recording yet. You can save it as-is, or run Gemini AI transcription to automatically analyze the spoken audio files.
+                  {t('rec.notTranscribed')}
                 </p>
               </div>
             )}
@@ -611,7 +594,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 onClick={handleResetRecord}
                 className="text-xs px-3.5 py-2.5 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
-                Clear
+                {t('rec.clear')}
               </button>
               <button
                 id="confirm-save-recording-btn"
@@ -620,7 +603,7 @@ export default function RecordingStudio({ profile, onSaveRecording, onClose }: R
                 className="text-xs px-5 py-2.5 bg-emerald-700 text-white hover:bg-emerald-85 rounded-lg flex items-center gap-1 cursor-pointer font-medium shadow"
               >
                 <Check className="w-3.5 h-3.5" />
-                Commit Story to Archive
+                {t('rec.save')}
               </button>
             </div>
           </div>

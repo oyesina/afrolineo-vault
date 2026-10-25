@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { OralHistory, Profile, ProfileRole } from '../types';
 import { Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { useI18n } from '../i18n';
+import type { MessageKey } from '../i18n/locales/en';
 
 interface FamilyTreeProps {
   profiles: Profile[];
@@ -36,21 +38,6 @@ export const ROLE_INFO: Record<ProfileRole, { label: string; addLabel: string; h
 export const initials = (name: string) =>
   name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
-export const RELATION_PHRASE: Record<ProfileRole, string> = {
-  self: 'You',
-  father: 'Your father',
-  mother: 'Your mother',
-  paternal_grandfather: 'Your father’s father',
-  paternal_grandmother: 'Your father’s mother',
-  maternal_grandfather: 'Your mother’s father',
-  maternal_grandmother: 'Your mother’s mother',
-  sibling: 'Your sibling',
-  uncle: 'Your uncle',
-  aunt: 'Your aunt',
-};
-
-const storyLabel = (count: number) => (count === 1 ? '1 story' : `${count} stories`);
-
 // Desktop canvas geometry (px, before zoom)
 const CARD_W = 160;
 const CARD_H = 84;
@@ -59,6 +46,14 @@ const CANVAS_H = 570;
 const ROW_Y = { grandparents: 44, parents: 254, children: 464 };
 const ZOOM_STEPS = [0.6, 0.75, 0.9, 1, 1.15, 1.3];
 
+/** Text keys for a role: its label, its "add" button and (for grandparents) which side. */
+export const roleKeys = (role: ProfileRole) => ({
+  label: `role.${role}` as MessageKey,
+  add: `roleAdd.${role}` as MessageKey,
+  relation: `relation.${role}` as MessageKey,
+  hint: (role.startsWith('paternal_') ? 'tree.fathersSide' : role.startsWith('maternal_') ? 'tree.mothersSide' : null) as MessageKey | null,
+});
+
 export default function FamilyTree({
   profiles,
   recordings = [],
@@ -66,6 +61,7 @@ export default function FamilyTree({
   onSelectProfile,
   onAddProfileWithRole,
 }: FamilyTreeProps) {
+  const { t, tc } = useI18n();
   const byRole = (role: ProfileRole) => profiles.find((p) => p.role === role);
   const self = byRole('self');
   const father = byRole('father');
@@ -140,7 +136,7 @@ export default function FamilyTree({
         type="button"
         id={`node-${profile.id}`}
         onClick={() => onSelectProfile(profile)}
-        aria-label={`${profile.fullName}, ${info.label}${count ? `, ${storyLabel(count)}` : ''}`}
+        aria-label={`${profile.fullName}, ${t(roleKeys(profile.role).label)}${count ? `, ${tc('tree.stories', count)}` : ''}`}
         aria-pressed={isSelected}
         style={style}
         className={`flex items-center gap-2 text-left rounded-[14px] px-2.5 cursor-pointer transition-all hover:-translate-y-0.5 focus-visible:-translate-y-0.5 ${
@@ -157,8 +153,8 @@ export default function FamilyTree({
         <span className="min-w-0 flex flex-col">
           <span className="font-semibold text-sm leading-tight line-clamp-2">{profile.fullName}</span>
           <span className={`mt-0.5 text-[12.5px] leading-tight ${isSelf ? 'text-[#CFC4B4]' : 'text-muted'}`}>
-            {info.label}
-            {count > 0 && <span className={`font-semibold ${isSelf ? 'text-ochre' : 'text-ochre-deep'}`}> · {storyLabel(count)}</span>}
+            {t(roleKeys(profile.role).label)}
+            {count > 0 && <span className={`font-semibold ${isSelf ? 'text-ochre' : 'text-ochre-deep'}`}> · {tc('tree.stories', count)}</span>}
           </span>
         </span>
       </button>
@@ -181,8 +177,8 @@ export default function FamilyTree({
           <Plus className="w-[18px] h-[18px]" aria-hidden="true" />
         </span>
         <span className="flex flex-col">
-          <span className="text-[13.5px] font-semibold leading-tight">{info.addLabel}</span>
-          {info.hint && <span className="text-xs">{info.hint}</span>}
+          <span className="text-[13.5px] font-semibold leading-tight">{t(roleKeys(role).add)}</span>
+          {roleKeys(role).hint && <span className="text-xs">{t(roleKeys(role).hint!)}</span>}
         </span>
       </button>
     );
@@ -207,15 +203,15 @@ export default function FamilyTree({
     <div className="space-y-5">
       {/* ===== Desktop / tablet: connected tree ===== */}
       <section
-        aria-label="Family tree"
+        aria-label={t('nav.tree')}
         className="hidden md:block bg-paper border border-line rounded-[20px] bg-[radial-gradient(#E3D9CA_1px,transparent_1px)] bg-size-[22px_22px]"
       >
         <div ref={scrollerRef} id="family-tree-scroller" className="overflow-auto py-2">
           <div className="mx-auto" style={{ width: canvasW * scale, height: CANVAS_H * scale }}>
             <div className="relative origin-top-left" style={{ width: canvasW, height: CANVAS_H, transform: `scale(${scale})` }}>
-              <GenerationLabel x={offset + 20} y={14}>Grandparents</GenerationLabel>
-              <GenerationLabel x={offset + 20} y={224}>Parents</GenerationLabel>
-              <GenerationLabel x={Math.min(offset + 20, childrenStart)} y={434}>You &amp; siblings</GenerationLabel>
+              <GenerationLabel x={offset + 20} y={14}>{t('tree.grandparents')}</GenerationLabel>
+              <GenerationLabel x={offset + 20} y={224}>{t('tree.parents')}</GenerationLabel>
+              <GenerationLabel x={Math.min(offset + 20, childrenStart)} y={434}>{t('tree.youAndSiblings')}</GenerationLabel>
 
               {/* Connectors: grandparents → parents */}
               {line({ left: offset + 180, top: 85, width: 20, height: 2 }, !!(pgf && pgm))}
@@ -250,27 +246,27 @@ export default function FamilyTree({
         {/* Legend + zoom */}
         <div className="flex flex-wrap justify-between items-center gap-3 px-4 pb-4">
           <div className="flex flex-wrap gap-4 text-[13px] text-muted">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-paternal-tint border border-[#D9B98A]" />Father’s side</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-forest-tint border border-[#9DBBA6]" />Mother’s side</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-tint border border-[#AEB4CF]" />Siblings</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-paternal-tint border border-[#D9B98A]" />{t('tree.fathersSide')}</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-forest-tint border border-[#9DBBA6]" />{t('tree.mothersSide')}</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-tint border border-[#AEB4CF]" />{t('tree.siblings')}</span>
           </div>
           <div className="flex items-center bg-white border border-line rounded-xl overflow-hidden">
-            <button type="button" onClick={zoomOut} aria-label="Zoom out" className="w-11 h-11 flex items-center justify-center hover:bg-sand cursor-pointer">
+            <button type="button" onClick={zoomOut} aria-label={t('tree.zoomOut')} className="w-11 h-11 flex items-center justify-center hover:bg-sand cursor-pointer">
               <Minus className="w-4 h-4" aria-hidden="true" />
             </button>
             <span className="text-[13px] font-semibold w-13 text-center text-ink-soft" aria-live="polite">{Math.round(scale * 100)}%</span>
-            <button type="button" onClick={zoomIn} aria-label="Zoom in" className="w-11 h-11 flex items-center justify-center hover:bg-sand cursor-pointer">
+            <button type="button" onClick={zoomIn} aria-label={t('tree.zoomIn')} className="w-11 h-11 flex items-center justify-center hover:bg-sand cursor-pointer">
               <Plus className="w-4 h-4" aria-hidden="true" />
             </button>
             <button type="button" onClick={() => setZoom(null)} className="h-11 px-3.5 border-l border-line text-[13.5px] font-semibold hover:bg-sand cursor-pointer">
-              Fit
+              {t('tree.fit')}
             </button>
           </div>
         </div>
       </section>
 
       {/* ===== Phone: one family at a time ===== */}
-      <section aria-label="Family tree" className="md:hidden flex flex-col items-center">
+      <section aria-label={t('nav.tree')} className="md:hidden flex flex-col items-center">
         <button
           type="button"
           onClick={() => setShowGrandparents((v) => !v)}
@@ -278,8 +274,8 @@ export default function FamilyTree({
           className="w-full h-13 flex items-center gap-2.5 px-4 border-[1.5px] border-dashed border-line-strong rounded-[14px] text-ink-soft cursor-pointer"
         >
           {showGrandparents ? <ChevronDown className="w-[18px] h-[18px]" aria-hidden="true" /> : <ChevronUp className="w-[18px] h-[18px]" aria-hidden="true" />}
-          <span className="font-semibold">Grandparents</span>
-          <span className="ml-auto text-[13.5px] text-muted">{grandparentCount} of 4 added</span>
+          <span className="font-semibold">{t('tree.grandparents')}</span>
+          <span className="ml-auto text-[13.5px] text-muted">{t('tree.gpAdded', { count: grandparentCount })}</span>
         </button>
         {showGrandparents && (
           <div className="w-full grid grid-cols-2 gap-3 mt-3">
@@ -305,7 +301,7 @@ export default function FamilyTree({
             <span className="min-w-0 flex flex-col">
               <span className="font-display text-xl leading-tight truncate">{self.fullName}</span>
               <span className="text-[13.5px] text-[#CFC4B4]">
-                You{self.lga && self.lga !== 'Unspecified' ? ` · ${self.lga}` : ''}{self.language ? ` · ${self.language}` : ''}
+                {t('role.self')}{self.lga && self.lga !== 'Unspecified' ? ` · ${self.lga}` : ''}{self.language ? ` · ${self.language}` : ''}
               </span>
             </span>
           </button>
@@ -314,7 +310,7 @@ export default function FamilyTree({
         )}
 
         <div className="w-full mt-6">
-          <h3 className="mb-2.5 font-sans text-[13px] font-bold tracking-[0.06em] uppercase text-[#6B6157]">Siblings</h3>
+          <h3 className="mb-2.5 font-sans text-[13px] font-bold tracking-[0.06em] uppercase text-[#6B6157]">{t('tree.siblings')}</h3>
           <div className="grid grid-cols-2 gap-3">
             {siblings.map((s) => (
               <React.Fragment key={s.id}>{PersonCard({ profile: s, compact: true })}</React.Fragment>
@@ -328,8 +324,8 @@ export default function FamilyTree({
       <section aria-labelledby="extended-family-heading" className="bg-white border border-line rounded-[20px] p-5">
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <div>
-            <h3 id="extended-family-heading" className="font-sans text-base font-bold">Uncles &amp; aunts</h3>
-            <p className="text-sm text-muted">Your parents’ brothers and sisters.</p>
+            <h3 id="extended-family-heading" className="font-sans text-base font-bold">{t('tree.unclesAunts')}</h3>
+            <p className="text-sm text-muted">{t('tree.unclesAuntsBody')}</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -338,7 +334,7 @@ export default function FamilyTree({
               onClick={() => onAddProfileWithRole('uncle')}
               className="h-11 px-4 inline-flex items-center gap-1.5 border-[1.5px] border-line rounded-xl font-semibold text-sm hover:border-ochre cursor-pointer"
             >
-              <Plus className="w-4 h-4" aria-hidden="true" /> Uncle
+              <Plus className="w-4 h-4" aria-hidden="true" /> {t('tree.uncle')}
             </button>
             <button
               type="button"
@@ -346,12 +342,12 @@ export default function FamilyTree({
               onClick={() => onAddProfileWithRole('aunt')}
               className="h-11 px-4 inline-flex items-center gap-1.5 border-[1.5px] border-line rounded-xl font-semibold text-sm hover:border-ochre cursor-pointer"
             >
-              <Plus className="w-4 h-4" aria-hidden="true" /> Aunt
+              <Plus className="w-4 h-4" aria-hidden="true" /> {t('tree.aunt')}
             </button>
           </div>
         </div>
         {unclesAndAunts.length === 0 ? (
-          <p className="text-sm text-muted">No uncles or aunts added yet.</p>
+          <p className="text-sm text-muted">{t('tree.noUnclesAunts')}</p>
         ) : (
           <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
             {unclesAndAunts.map((p) => (

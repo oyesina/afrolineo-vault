@@ -274,3 +274,13 @@ A password-protected dashboard at **`/admin`** shows how people use Afrolineo: g
 **What is collected** (see `server/analytics.ts`): account details (name, email, sign-in method, onboarding answers), activity events (sign-ins, screens, people added, stories recorded and their length, playback, links, exports), and an outline of each tree (names, relationships, living status). Recordings, transcripts and notes are never sent.
 
 **Consent:** every visitor sees a cookie notice (`src/components/CookieConsent.tsx`). Nothing is sent to the admin console until they choose "Accept all" or switch on Analytics, and browsers sending Global Privacy Control start with analytics off. The dashboard therefore only counts people who opted in. If what you collect changes, bump `CONSENT_VERSION` in `src/lib/consent.ts` so everyone is asked again.
+
+## Languages
+
+The main screens are available in English, French, German, Spanish, Italian, Portuguese (European) and Dutch. Text lives in `src/i18n/locales/` (English in `en.ts` is the source; the other files must have the same keys, which TypeScript checks).
+
+**How a language is chosen:** a language the visitor picked before (or `?lang=fr` in the address) → their browser language if supported (English included) → the main language of their country → English. Belgium, Switzerland and Luxembourg are left to the browser language.
+
+**Country detection** (`server/locale.ts`) reads a header from the host or CDN: Cloudflare `CF-IPCountry`, Vercel `X-Vercel-IP-Country` or CloudFront `CloudFront-Viewer-Country`. On Google Cloud, add a custom header to the load balancer and set `GEO_COUNTRY_HEADER`. Nothing is stored. Use `DEV_COUNTRY=FR` to test locally.
+
+A language menu (English first) is in the landing header and footer, the app sidebar and the phone header. The long information pages (About, Articles, Terms…) and the admin console are English only for now. The translations are machine-assisted drafts and should be reviewed by native speakers, especially the cookie and privacy text.
