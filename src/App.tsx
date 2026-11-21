@@ -9,6 +9,7 @@ import FamilyTree, { ROLE_INFO, SIDE_STYLES, initials, roleKeys } from './compon
 import OriginsProfileForm from './components/OriginsProfileForm';
 import RecordingStudio from './components/RecordingStudio';
 import LineageMark from './components/LineageMark';
+import BrandMark from './components/BrandMark';
 import { identify, setAnalyticsUser, syncTreeOutline, track } from './lib/analytics';
 import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from './lib/consent';
 import CookieConsent from './components/CookieConsent';
@@ -714,7 +715,7 @@ export default function App() {
         <div className="flex flex-col gap-6 w-full">
           <div className={`flex items-center gap-2.5 w-full ${isSidebarCollapsed ? 'justify-center' : 'px-2 pt-1'}`}>
             <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center shrink-0">
-              <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+              <BrandMark className="w-6 h-6" />
             </span>
             {!isSidebarCollapsed && <span className="font-display text-[21px] font-semibold tracking-tight">Afrolineo</span>}
           </div>
@@ -802,7 +803,7 @@ export default function App() {
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
-              <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+              <BrandMark className="w-6 h-6" />
             </span>
             <span className="font-display text-xl font-semibold tracking-tight">Afrolineo</span>
           </div>

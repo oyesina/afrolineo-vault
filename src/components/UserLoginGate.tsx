@@ -8,6 +8,7 @@ import {
   Settings, Plus, Download, Smile, Search, BookOpen, Gift, Play, Pause, Bookmark, Check
 } from 'lucide-react';
 import LineageMark from './LineageMark';
+import BrandMark from './BrandMark';
 import { track } from '../lib/analytics';
 import { hasAnalyticsConsent, onConsentChange, openCookieSettings } from '../lib/consent';
 import CookieConsent from './CookieConsent';
@@ -504,7 +505,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
             <a href="#top" aria-label="Afrolineo" className="flex items-center gap-2.5 text-ink no-underline shrink-0">
               <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
-                <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+                <BrandMark className="w-6 h-6" />
               </span>
               <span className="hidden min-[430px]:inline font-display text-xl sm:text-[22px] font-semibold tracking-tight">Afrolineo</span>
             </a>
@@ -981,7 +982,7 @@ export default function UserLoginGate({ onLoginSuccess }: UserLoginGateProps) {
               /* ---------- Step 1: sign in / create account ---------- */
               <div className="animate-fadeIn">
                 <span className="w-11 h-11 rounded-xl bg-ink flex items-center justify-center">
-                  <LineageMark className="w-6 h-6 text-[#E2A04F]" />
+                  <BrandMark className="w-7 h-7" />
                 </span>
                 <h2 id="login-window-title" className="mt-4 font-display font-medium text-[28px] leading-tight tracking-[-0.01em]">
                   {isSignUp ? t('auth.startArchive') : t('auth.welcomeBack')}

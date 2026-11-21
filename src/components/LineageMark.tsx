@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** Afrolineo logo mark: three linked people forming a small family tree. */
+/** Family-tree icon: three linked people (used for "Family tree" menus). The logo is BrandMark. */
 export default function LineageMark({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className} aria-hidden="true">

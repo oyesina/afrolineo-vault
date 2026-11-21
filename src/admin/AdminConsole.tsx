@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Download, LogOut, RefreshCw, Search, X, Lock, Users as UsersIcon, LayoutDashboard,
 } from 'lucide-react';
-import LineageMark from '../components/LineageMark';
+import BrandMark from '../components/BrandMark';
 import { BarList, TimeChart } from './charts';
 
 // ---------- Types (mirror server/analytics.ts) ----------
@@ -676,7 +676,7 @@ export default function AdminConsole() {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
           <a href="/" className="flex items-center gap-2.5 shrink-0" title="Back to the app">
             <span className="w-9 h-9 rounded-[10px] bg-ink flex items-center justify-center">
-              <LineageMark className="w-5 h-5 text-[#E2A04F]" />
+              <BrandMark className="w-6 h-6" />
             </span>
             <span className="font-display text-xl font-semibold hidden sm:inline">Afrolineo</span>
             <span className="text-xs font-bold uppercase tracking-[0.08em] bg-sand text-ink-soft px-2 py-1 rounded-md">Admin</span>
